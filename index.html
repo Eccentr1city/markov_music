@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Markov Jazz Changes</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-deep: #0a0a0c;
+      --bg-surface: #141418;
+      --bg-elevated: #1c1c22;
+      --border: #2a2a33;
+      --text-primary: #f0ebe3;
+      --text-secondary: #8a8a99;
+      --text-muted: #55555f;
+      --accent: #e8c468;
+      --accent-dim: #a68a3c;
+      --current-glow: rgba(232, 196, 104, 0.15);
+      --chord-bg: #1a1a20;
+      --chord-current: #252530;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'JetBrains Mono', monospace;
+      background: var(--bg-deep);
+      color: var(--text-primary);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      padding: 1.5rem 2rem;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    h1 {
+      font-family: 'Instrument Serif', serif;
+      font-size: 1.5rem;
+      font-weight: 400;
+      color: var(--text-primary);
+      letter-spacing: 0.02em;
+    }
+
+    .key-display {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      background: var(--bg-elevated);
+      padding: 0.4rem 0.8rem;
+      border-radius: 4px;
+      border: 1px solid var(--border);
+    }
+
+    .key-display span {
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 2rem;
+    }
+
+    .lead-sheet {
+      max-width: 1000px;
+      margin: 0 auto;
+      width: 100%;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .rows-container {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 0.75rem;
+      transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+    }
+
+    .row.fading {
+      opacity: 0;
+      transform: translateY(-10px);
+    }
+
+    .row.upcoming {
+      opacity: 0.5;
+    }
+
+    .row.entering {
+      animation: fadeInUp 0.6s ease-out forwards;
+    }
+
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(15px);
+      }
+      to {
+        opacity: 0.5;
+        transform: translateY(0);
+      }
+    }
+
+    .bar {
+      background: var(--chord-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.25rem;
+      min-height: 100px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      gap: 0.5rem;
+      transition: all 0.25s ease;
+      position: relative;
+    }
+
+    .bar.current {
+      background: var(--chord-current);
+      border-color: var(--accent);
+      box-shadow: 0 0 30px var(--current-glow), inset 0 0 30px var(--current-glow);
+    }
+
+    .bar.played {
+      opacity: 0.5;
+    }
+
+    .row.fading .bar {
+      opacity: 0.3;
+    }
+
+    .bar-number {
+      position: absolute;
+      top: 0.5rem;
+      left: 0.6rem;
+      font-size: 0.65rem;
+      color: var(--text-muted);
+    }
+
+    .chord {
+      font-family: 'Instrument Serif', serif;
+      font-size: 2rem;
+      font-weight: 400;
+      text-align: center;
+      line-height: 1.2;
+    }
+
+    .chord .root {
+      color: var(--text-primary);
+    }
+
+    .chord .quality {
+      color: var(--text-secondary);
+      font-size: 0.65em;
+      vertical-align: super;
+    }
+
+    .chord .bass {
+      color: var(--text-muted);
+      font-size: 0.7em;
+    }
+
+    .bar.two-chords {
+      flex-direction: row;
+      justify-content: space-around;
+    }
+
+    .bar.two-chords .chord {
+      font-size: 1.5rem;
+    }
+
+    .bar.two-chords .divider {
+      width: 1px;
+      height: 60%;
+      background: var(--border);
+    }
+
+    .degree-hint {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .bar.current .degree-hint {
+      color: var(--accent-dim);
+    }
+
+    footer {
+      padding: 1.5rem 2rem;
+      border-top: 1px solid var(--border);
+      background: var(--bg-surface);
+    }
+
+    .controls {
+      max-width: 1000px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      gap: 2rem;
+      flex-wrap: wrap;
+    }
+
+    .transport {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .btn {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      color: var(--text-primary);
+      padding: 0.6rem 1.2rem;
+      border-radius: 6px;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 0.85rem;
+      transition: all 0.2s ease;
+    }
+
+    .btn:hover {
+      background: var(--chord-current);
+      border-color: var(--text-muted);
+    }
+
+    .btn.primary {
+      background: var(--accent);
+      color: var(--bg-deep);
+      border-color: var(--accent);
+      font-weight: 600;
+      min-width: 80px;
+    }
+
+    .btn.primary:hover {
+      background: var(--accent-dim);
+      border-color: var(--accent-dim);
+    }
+
+    .control-group {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .control-group label {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      background: var(--bg-elevated);
+      height: 6px;
+      border-radius: 3px;
+      width: 120px;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 16px;
+      height: 16px;
+      background: var(--accent);
+      border-radius: 50%;
+      cursor: pointer;
+    }
+
+    .tempo-value {
+      font-size: 0.85rem;
+      color: var(--accent);
+      min-width: 50px;
+    }
+
+    .settings-toggle {
+      margin-left: auto;
+    }
+
+    .settings-panel {
+      max-width: 1000px;
+      margin: 1rem auto 0;
+      padding-top: 1rem;
+      border-top: 1px solid var(--border);
+      display: none;
+      gap: 2rem;
+      flex-wrap: wrap;
+    }
+
+    .settings-panel.open {
+      display: flex;
+    }
+
+    .beat-indicator {
+      display: flex;
+      gap: 0.25rem;
+      margin-left: 1rem;
+    }
+
+    .beat {
+      width: 8px;
+      height: 8px;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: 50%;
+    }
+
+    .beat.active {
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+
+    .shortcuts {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      margin-left: auto;
+    }
+
+    .shortcuts span {
+      display: inline-block;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      padding: 0.15rem 0.4rem;
+      border-radius: 3px;
+      margin-right: 0.25rem;
+      font-size: 0.65rem;
+    }
+
+    .key-change-badge {
+      position: absolute;
+      top: 0.4rem;
+      right: 0.5rem;
+      font-size: 0.55rem;
+      color: var(--accent);
+      background: rgba(232, 196, 104, 0.15);
+      padding: 0.15rem 0.35rem;
+      border-radius: 3px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    @media (max-width: 768px) {
+      .lead-sheet {
+        grid-template-columns: repeat(2, 1fr);
+      }
+      
+      .controls {
+        justify-content: center;
+      }
+      
+      .settings-toggle {
+        margin-left: 0;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Markov Jazz Changes</h1>
+    <div class="key-display">Key: <span id="current-key">C major</span></div>
+  </header>
+
+  <main>
+    <div class="lead-sheet" id="lead-sheet">
+      <div class="rows-container" id="rows-container">
+        <!-- Rows will be generated here -->
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    <div class="controls">
+      <div class="transport">
+        <button class="btn primary" id="play-btn">Play</button>
+        <button class="btn" id="reset-btn">Reset</button>
+      </div>
+      
+      <div class="beat-indicator">
+        <div class="beat" data-beat="1"></div>
+        <div class="beat" data-beat="2"></div>
+        <div class="beat" data-beat="3"></div>
+        <div class="beat" data-beat="4"></div>
+      </div>
+
+      <div class="control-group">
+        <label>Tempo</label>
+        <input type="range" id="tempo" min="40" max="200" value="120">
+        <span class="tempo-value"><span id="tempo-value">120</span> bpm</span>
+      </div>
+
+      <button class="btn settings-toggle" id="settings-toggle">Settings</button>
+    </div>
+
+    <div class="settings-panel" id="settings-panel">
+      <div class="control-group">
+        <label>Key Stability</label>
+        <input type="range" id="key-stability" min="0" max="100" value="85">
+      </div>
+      <div class="control-group">
+        <label>Adventurousness</label>
+        <input type="range" id="adventurousness" min="0" max="100" value="30">
+      </div>
+      <div class="control-group">
+        <label>Extension Complexity</label>
+        <input type="range" id="complexity" min="0" max="100" value="50">
+      </div>
+      <div class="control-group">
+        <label>Two-Chord Bars</label>
+        <input type="range" id="two-chord" min="0" max="50" value="15">
+      </div>
+      <div class="shortcuts">
+        <span>Space</span> play/pause
+        <span>→</span> next bar
+        <span>R</span> reset
+      </div>
+    </div>
+  </footer>
+
+  <script src="engine.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
+
