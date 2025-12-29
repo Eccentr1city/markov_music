@@ -331,6 +331,16 @@
       border-color: var(--accent);
     }
 
+    #metronome-btn {
+      min-width: 80px;
+    }
+
+    #metronome-btn.active {
+      background: var(--chord-current);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
     .shortcuts {
       font-size: 0.7rem;
       color: var(--text-muted);
@@ -402,6 +412,8 @@
         <div class="beat" data-beat="3"></div>
         <div class="beat" data-beat="4"></div>
       </div>
+
+      <button class="btn" id="metronome-btn">🔕 Off</button>
 
       <div class="control-group">
         <label>Tempo</label>
