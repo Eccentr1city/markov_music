@@ -27,35 +27,35 @@ class Metronome {
         if (!this.enabled || !this.audioContext) return;
 
         const now = this.audioContext.currentTime;
-        
+
         // Create noise source for unpitched percussion
         const bufferSize = this.audioContext.sampleRate * 0.05; // 50ms of noise
         const noiseBuffer = this.audioContext.createBuffer(1, bufferSize, this.audioContext.sampleRate);
         const data = noiseBuffer.getChannelData(0);
-        
+
         // Fill with white noise
         for (let i = 0; i < bufferSize; i++) {
             data[i] = Math.random() * 2 - 1;
         }
-        
+
         const noise = this.audioContext.createBufferSource();
         noise.buffer = noiseBuffer;
-        
+
         // Bandpass filter to shape the click character
         const filter = this.audioContext.createBiquadFilter();
         filter.type = 'bandpass';
-        
+
         // Gain for envelope
         const gain = this.audioContext.createGain();
-        
+
         // Connect: noise -> filter -> gain -> output
         noise.connect(filter);
         filter.connect(gain);
         gain.connect(this.audioContext.destination);
-        
+
         // Different characteristics for different beats
         let filterFreq, filterQ, volume, decay;
-        
+
         if (beatNumber === 1) {
             // Beat 1: Gentle stick click (downbeat accent)
             filterFreq = 2800;
@@ -75,15 +75,15 @@ class Metronome {
             volume = 0.01;
             decay = 0.08;
         }
-        
+
         filter.frequency.setValueAtTime(filterFreq, now);
         filter.Q.setValueAtTime(filterQ, now);
-        
+
         // Softer attack, longer decay (more subtle envelope)
         gain.gain.setValueAtTime(0, now);
         gain.gain.linearRampToValueAtTime(volume, now + 0.005);
         gain.gain.exponentialRampToValueAtTime(0.001, now + decay);
-        
+
         // Play
         noise.start(now);
         noise.stop(now + 0.05);
@@ -111,10 +111,11 @@ class MarkovJazzApp {
         this.tempo = 120;
         this.currentBeat = 0;
 
-        // Row-based tracking
-        this.barsPerRow = 4;
+        // Row-based tracking (responsive)
+        this.barsPerRow = this.getResponsiveBarsPerRow();
+        this.visibleRows = this.getVisibleRows();
         this.currentBarIndex = 0;  // Global bar index (0-based)
-        this.rows = [];            // Array of row data, each row has 4 bars
+        this.rows = [];            // Array of row data
         this.displayedRowStart = 0; // Which row index is at the top of display
 
         this.intervalId = null;
@@ -122,6 +123,64 @@ class MarkovJazzApp {
         this.initUI();
         this.initRows();
         this.render();
+
+        // Re-layout on resize (with debounce)
+        this._resizeTimer = null;
+        window.addEventListener('resize', () => {
+            clearTimeout(this._resizeTimer);
+            this._resizeTimer = setTimeout(() => this.handleResize(), 250);
+        });
+    }
+
+    getResponsiveBarsPerRow() {
+        return window.innerWidth <= 600 ? 2 : 4;
+    }
+
+    getVisibleRows() {
+        return window.innerWidth <= 600 ? 3 : 3;
+    }
+
+    handleResize() {
+        const newBarsPerRow = this.getResponsiveBarsPerRow();
+        const newVisibleRows = this.getVisibleRows();
+
+        if (newBarsPerRow !== this.barsPerRow) {
+            // Bars per row changed — need to rebuild row layout
+            // Collect all generated bars from existing rows
+            const allBars = [];
+            for (const row of this.rows) {
+                allBars.push(...row.bars);
+            }
+
+            this.barsPerRow = newBarsPerRow;
+            this.visibleRows = newVisibleRows;
+
+            // Redistribute bars into new row sizes
+            this.rows = [];
+            for (let i = 0; i < allBars.length; i += this.barsPerRow) {
+                this.rows.push({ bars: allBars.slice(i, i + this.barsPerRow) });
+            }
+
+            // Pad last row if incomplete
+            const lastRow = this.rows[this.rows.length - 1];
+            while (lastRow && lastRow.bars.length < this.barsPerRow) {
+                lastRow.bars.push(this.engine.generateBar());
+            }
+
+            // Recalculate display position
+            this.displayedRowStart = Math.floor(this.currentBarIndex / this.barsPerRow);
+
+            // Ensure we have enough rows ahead
+            while (this.rows.length < this.displayedRowStart + this.visibleRows) {
+                this.rows.push(this.generateRow());
+            }
+
+            this.rowsContainer.style.transform = 'translateY(0)';
+            this.render();
+        } else if (newVisibleRows !== this.visibleRows) {
+            this.visibleRows = newVisibleRows;
+            this.render();
+        }
     }
 
     initUI() {
@@ -214,8 +273,8 @@ class MarkovJazzApp {
         this.currentBarIndex = 0;
         this.displayedRowStart = 0;
 
-        // Generate initial rows (3 rows = 12 bars of lookahead)
-        for (let i = 0; i < 3; i++) {
+        // Generate initial rows based on visible count
+        for (let i = 0; i < this.visibleRows; i++) {
             this.rows.push(this.generateRow());
         }
     }
@@ -338,7 +397,7 @@ class MarkovJazzApp {
 
         // Animate container up
         const rowHeight = rowElements[0]?.offsetHeight || 100;
-        const gap = 12; // 0.75rem
+        const gap = window.innerWidth <= 600 ? 8 : 12; // matches CSS gap
         this.rowsContainer.style.transform = `translateY(-${rowHeight + gap}px)`;
 
         // After animation completes
@@ -346,7 +405,7 @@ class MarkovJazzApp {
             this.displayedRowStart++;
 
             // Generate new row if needed
-            while (this.rows.length < this.displayedRowStart + 3) {
+            while (this.rows.length < this.displayedRowStart + this.visibleRows) {
                 this.rows.push(this.generateRow());
             }
 
@@ -367,6 +426,8 @@ class MarkovJazzApp {
         this.pause();
         this.currentBeat = 0;
         this.engine.reset();
+        this.barsPerRow = this.getResponsiveBarsPerRow();
+        this.visibleRows = this.getVisibleRows();
         this.rowsContainer.style.transform = 'translateY(0)';
         this.initRows();
         this.render();
@@ -386,7 +447,7 @@ class MarkovJazzApp {
         }
 
         // Display rows starting from displayedRowStart
-        const rowsToShow = this.displayedRowStart + 3;
+        const rowsToShow = this.displayedRowStart + this.visibleRows;
         for (let rowIdx = this.displayedRowStart; rowIdx < rowsToShow; rowIdx++) {
             if (rowIdx >= this.rows.length) break;
 

@@ -2,7 +2,10 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#0a0a0c">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>Markov Jazz Changes</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -370,15 +373,138 @@
       letter-spacing: 0.05em;
     }
 
-    @media (max-width: 768px) {
-      .lead-sheet {
-        grid-template-columns: repeat(2, 1fr);
+    /* ── Mobile (phones) ── */
+    @media (max-width: 600px) {
+      header {
+        padding: 0.75rem 1rem;
       }
-      
+
+      h1 {
+        font-size: 1.15rem;
+      }
+
+      .key-display {
+        font-size: 0.75rem;
+        padding: 0.3rem 0.6rem;
+      }
+
+      main {
+        padding: 1rem 0.6rem;
+      }
+
+      .row {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.5rem;
+      }
+
+      .rows-container {
+        gap: 0.5rem;
+      }
+
+      .bar {
+        padding: 0.8rem 0.5rem;
+        min-height: 72px;
+        border-radius: 6px;
+      }
+
+      .chord {
+        font-size: 1.6rem;
+      }
+
+      .bar.two-chords .chord {
+        font-size: 1.15rem;
+      }
+
+      .bar-number {
+        font-size: 0.55rem;
+        top: 0.3rem;
+        left: 0.4rem;
+      }
+
+      .key-change-badge {
+        font-size: 0.5rem;
+        top: 0.3rem;
+        right: 0.35rem;
+        padding: 0.1rem 0.25rem;
+      }
+
+      .degree-hint {
+        font-size: 0.6rem;
+      }
+
+      footer {
+        padding: 0.75rem 1rem;
+      }
+
+      .controls {
+        gap: 0.6rem;
+        justify-content: center;
+      }
+
+      .transport {
+        gap: 0.4rem;
+      }
+
+      .btn {
+        padding: 0.5rem 0.9rem;
+        font-size: 0.8rem;
+      }
+
+      .btn.primary {
+        min-width: 70px;
+      }
+
+      .control-group {
+        gap: 0.4rem;
+      }
+
+      .control-group label {
+        font-size: 0.65rem;
+      }
+
+      input[type="range"] {
+        width: 80px;
+      }
+
+      .tempo-value {
+        font-size: 0.75rem;
+        min-width: 40px;
+      }
+
+      .beat-indicator {
+        margin-left: 0;
+      }
+
+      .settings-toggle {
+        margin-left: 0;
+      }
+
+      .shortcuts {
+        display: none;
+      }
+
+      .settings-panel {
+        gap: 0.75rem;
+        padding-top: 0.75rem;
+      }
+
+      #metronome-btn {
+        min-width: 70px;
+        font-size: 0.8rem;
+      }
+    }
+
+    /* ── Tablets ── */
+    @media (min-width: 601px) and (max-width: 900px) {
+      .row {
+        grid-template-columns: repeat(4, 1fr);
+        gap: 0.5rem;
+      }
+
       .controls {
         justify-content: center;
       }
-      
+
       .settings-toggle {
         margin-left: 0;
       }
