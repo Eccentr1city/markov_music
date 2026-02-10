@@ -338,7 +338,8 @@
       min-width: 80px;
     }
 
-    #metronome-btn.active {
+    #metronome-btn.active,
+    #bass-btn.active {
       background: var(--chord-current);
       border-color: var(--accent);
       color: var(--accent);
@@ -488,7 +489,8 @@
         padding-top: 0.75rem;
       }
 
-      #metronome-btn {
+      #metronome-btn,
+      #bass-btn {
         min-width: 70px;
         font-size: 0.8rem;
       }
@@ -540,11 +542,12 @@
       </div>
 
       <button class="btn" id="metronome-btn">🔕 Off</button>
+      <button class="btn" id="bass-btn">🎸 Bass</button>
 
       <div class="control-group">
         <label>Tempo</label>
-        <input type="range" id="tempo" min="40" max="200" value="120">
-        <span class="tempo-value"><span id="tempo-value">120</span> bpm</span>
+        <input type="range" id="tempo" min="40" max="120" value="60">
+        <span class="tempo-value"><span id="tempo-value">60</span> bpm</span>
       </div>
 
       <button class="btn settings-toggle" id="settings-toggle">Settings</button>
@@ -576,6 +579,7 @@
   </footer>
 
   <script src="engine.js"></script>
+  <script src="bass.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

@@ -107,8 +107,9 @@ class MarkovJazzApp {
     constructor() {
         this.engine = new MarkovJazzEngine();
         this.metronome = new Metronome();
+        this.bass = new BassPlayer();
         this.isPlaying = false;
-        this.tempo = 120;
+        this.tempo = 60;
         this.currentBeat = 0;
 
         // Row-based tracking (responsive)
@@ -255,6 +256,17 @@ class MarkovJazzApp {
             });
         }
 
+        // Bass toggle
+        this.bassBtn = document.getElementById('bass-btn');
+        if (this.bassBtn) {
+            this.bassBtn.addEventListener('click', async () => {
+                const enabled = await this.bass.toggle();
+                this.bassBtn.classList.toggle('active', enabled);
+                this.bassBtn.textContent = enabled ? '🎸 Bass' : '🎸 Bass';
+                // Visual distinction is handled by the .active class
+            });
+        }
+
         // Keyboard shortcuts
         document.addEventListener('keydown', (e) => {
             if (e.code === 'Space') {
@@ -334,6 +346,9 @@ class MarkovJazzApp {
         // Play metronome sound for current beat
         this.metronome.playBeat(this.currentBeat);
 
+        // Play bass note on chord changes
+        this.playBassForBeat(this.currentBeat);
+
         this.updateBeatIndicator();
     }
 
@@ -341,6 +356,19 @@ class MarkovJazzApp {
         this.beatIndicators.forEach((el, index) => {
             el.classList.toggle('active', index < this.currentBeat);
         });
+    }
+
+    playBassForBeat(beat) {
+        const currentBar = this.getCurrentBar();
+        if (!currentBar) return;
+
+        if (beat === 1) {
+            // Beat 1: play root of first (or only) chord
+            this.bass.play(currentBar.chords[0].root);
+        } else if (beat === 3 && currentBar.chords.length === 2) {
+            // Beat 3: play root of second chord in two-chord bars
+            this.bass.play(currentBar.chords[1].root);
+        }
     }
 
     updateCurrentBarHighlight() {
