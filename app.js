@@ -362,12 +362,11 @@ class MarkovJazzApp {
         const currentBar = this.getCurrentBar();
         if (!currentBar) return;
 
-        if (beat === 1) {
-            // Beat 1: play root of first (or only) chord
-            this.bass.play(currentBar.chords[0].root);
-        } else if (beat === 3 && currentBar.chords.length === 2) {
-            // Beat 3: play root of second chord in two-chord bars
-            this.bass.play(currentBar.chords[1].root);
+        if (beat === 1 || beat === 3) {
+            // Two-chord bars: first chord on 1, second chord on 3
+            // One-chord bars: same root on both 1 and 3
+            const chordIdx = (beat === 3 && currentBar.chords.length === 2) ? 1 : 0;
+            this.bass.play(currentBar.chords[chordIdx].root);
         }
     }
 
