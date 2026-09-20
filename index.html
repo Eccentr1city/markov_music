@@ -9,7 +9,7 @@
   <title>Markov Jazz Changes</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;600&family=Newsreader:opsz,wght@6..72,400&display=swap" rel="stylesheet">
   <style>
     :root {
       --bg-deep: #0a0a0c;
@@ -24,6 +24,9 @@
       --current-glow: rgba(232, 196, 104, 0.15);
       --chord-bg: #1a1a20;
       --chord-current: #252530;
+      --hit: #8fcf9f;
+      --miss: #c97a72;
+      --ivory: #d9d4c7;
     }
 
     * {
@@ -71,11 +74,50 @@
       font-weight: 600;
     }
 
+    .header-status {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+
+    .midi-status,
+    .score {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+    }
+
+    .midi-status::before {
+      content: '';
+      display: inline-block;
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      margin-right: 0.45rem;
+      background: var(--text-muted);
+    }
+
+    .midi-status[data-state="connected"]::before {
+      background: var(--hit);
+    }
+
+    .score {
+      color: var(--hit);
+      background: var(--bg-elevated);
+      padding: 0.4rem 0.7rem;
+      border-radius: 4px;
+      border: 1px solid var(--border);
+    }
+
+    [hidden] {
+      display: none !important;
+    }
+
     main {
       flex: 1;
       display: flex;
       flex-direction: column;
       justify-content: center;
+      gap: 2rem;
       padding: 2rem;
     }
 
@@ -99,6 +141,39 @@
       grid-template-columns: repeat(4, 1fr);
       gap: 0.75rem;
       transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+    }
+
+    .row {
+      position: relative;
+    }
+
+    /* Analysis marks: ii–V brackets and dominant-resolution arrows */
+    svg.analysis {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      overflow: visible;
+      pointer-events: none;
+    }
+
+    svg.analysis .mark {
+      fill: none;
+      stroke-width: 1.25;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    svg.analysis .bracket {
+      stroke: var(--text-secondary);
+    }
+
+    svg.analysis .arrow {
+      stroke: var(--accent-dim);
+    }
+
+    svg.analysis .dashed {
+      stroke-dasharray: 3 4;
     }
 
     .row.fading {
@@ -178,6 +253,44 @@
       color: var(--text-secondary);
       font-size: 0.65em;
       vertical-align: super;
+      /* Instrument Serif's 1 is indistinguishable from l, so "-11" read as "-ll" */
+      font-family: 'Newsreader', 'Instrument Serif', serif;
+      font-variant-numeric: lining-nums;
+      margin-left: 0.06em;
+    }
+
+    /* ♭ and ♯ come from a fallback font; rein them in to match the serif */
+    .acc {
+      font-family: 'Noto Music', 'Apple Symbols', 'Segoe UI Symbol', sans-serif;
+      font-size: 0.62em;
+      vertical-align: 0.32em;
+      margin: 0 0.02em 0 0.04em;
+    }
+
+    .quality .acc {
+      font-size: 0.85em;
+      vertical-align: 0.05em;
+    }
+
+    .key-display .acc,
+    .key-change-badge .acc {
+      font-size: 0.95em;
+      vertical-align: 0;
+    }
+
+    /* Feedback from the listener */
+    .chord.active .root {
+      color: var(--accent);
+    }
+
+    .chord.hit .root,
+    .chord.hit .quality {
+      color: var(--hit);
+    }
+
+    .chord.miss .root,
+    .chord.miss .quality {
+      color: var(--miss);
     }
 
     .chord .bass {
@@ -221,7 +334,7 @@
       margin: 0 auto;
       display: flex;
       align-items: center;
-      gap: 2rem;
+      gap: 1.25rem;
       flex-wrap: wrap;
     }
 
@@ -334,15 +447,122 @@
       border-color: var(--accent);
     }
 
-    #metronome-btn {
-      min-width: 80px;
+    .beat.count-in.active {
+      background: var(--text-secondary);
+      border-color: var(--text-secondary);
     }
 
-    #metronome-btn.active,
-    #bass-btn.active {
+    .band,
+    .segmented {
+      display: flex;
+      gap: 0.35rem;
+    }
+
+    .btn.toggle {
+      padding: 0.6rem 0.8rem;
+      color: var(--text-secondary);
+    }
+
+    .btn.toggle.active {
       background: var(--chord-current);
       border-color: var(--accent);
       color: var(--accent);
+    }
+
+    select {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      color: var(--text-primary);
+      padding: 0.4rem 0.6rem;
+      border-radius: 6px;
+      font-family: inherit;
+      font-size: 0.75rem;
+    }
+
+    label.check {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      cursor: pointer;
+    }
+
+    label.check input {
+      accent-color: var(--accent);
+    }
+
+    /* ── On-screen keyboard ── */
+    .keyboard-panel {
+      max-width: 1000px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    .keyboard {
+      position: relative;
+      height: 84px;
+      user-select: none;
+      touch-action: none;
+    }
+
+    .key {
+      position: absolute;
+      top: 0;
+      cursor: pointer;
+      transition: background 0.08s ease;
+    }
+
+    .key.white {
+      height: 100%;
+      background: var(--ivory);
+      border: 1px solid var(--bg-deep);
+      border-radius: 0 0 4px 4px;
+    }
+
+    .key.black {
+      height: 58%;
+      background: #16161b;
+      border: 1px solid var(--bg-deep);
+      border-top: none;
+      border-radius: 0 0 3px 3px;
+      z-index: 1;
+    }
+
+    .key.down {
+      background: var(--accent);
+    }
+
+    .key.down.wrong {
+      background: var(--miss);
+    }
+
+    /* Suggested notes: a dot, so they read differently from pressed keys */
+    .key.hint::after {
+      content: '';
+      position: absolute;
+      left: 50%;
+      bottom: 8px;
+      width: 8px;
+      height: 8px;
+      margin-left: -4px;
+      border-radius: 50%;
+      background: var(--accent-dim);
+    }
+
+    .key-label {
+      position: absolute;
+      bottom: 3px;
+      left: 3px;
+      font-size: 0.5rem;
+      color: #8a8577;
+      pointer-events: none;
+    }
+
+    .key.hint .key-label {
+      display: none;
     }
 
     .shortcuts {
@@ -489,10 +709,21 @@
         padding-top: 0.75rem;
       }
 
-      #metronome-btn,
-      #bass-btn {
-        min-width: 70px;
-        font-size: 0.8rem;
+      .btn.toggle {
+        padding: 0.5rem 0.6rem;
+        font-size: 0.75rem;
+      }
+
+      main {
+        gap: 1rem;
+      }
+
+      .keyboard {
+        height: 64px;
+      }
+
+      .midi-status {
+        display: none;
       }
     }
 
@@ -516,7 +747,11 @@
 <body>
   <header>
     <h1>Markov Jazz Changes</h1>
-    <div class="key-display">Key: <span id="current-key">C major</span></div>
+    <div class="header-status">
+      <div class="midi-status" id="midi-status" hidden>MIDI off</div>
+      <div class="score" id="score" title="Chords played correctly" hidden>0/0</div>
+      <div class="key-display">Key: <span id="current-key">C major</span></div>
+    </div>
   </header>
 
   <main>
@@ -524,6 +759,10 @@
       <div class="rows-container" id="rows-container">
         <!-- Rows will be generated here -->
       </div>
+    </div>
+
+    <div class="keyboard-panel" id="keyboard-panel" hidden>
+      <div class="keyboard" id="keyboard"></div>
     </div>
   </main>
 
@@ -541,13 +780,26 @@
         <div class="beat" data-beat="4"></div>
       </div>
 
-      <button class="btn" id="metronome-btn">🔕 Off</button>
-      <button class="btn" id="bass-btn">🎸 Bass</button>
+      <div class="band">
+        <button class="btn toggle" id="metronome-btn">Click</button>
+        <button class="btn toggle" id="drums-btn">Drums</button>
+        <button class="btn toggle" id="bass-btn">Bass</button>
+        <button class="btn toggle" id="comp-btn">Keys</button>
+      </div>
 
       <div class="control-group">
         <label>Tempo</label>
-        <input type="range" id="tempo" min="40" max="120" value="60">
+        <input type="range" id="tempo" min="40" max="240" value="60">
         <span class="tempo-value"><span id="tempo-value">60</span> bpm</span>
+      </div>
+
+      <div class="control-group">
+        <label>Listen</label>
+        <div class="segmented">
+          <button class="btn toggle active" data-listen="off">Off</button>
+          <button class="btn toggle" data-listen="time" title="Play each chord in time with the band">In time</button>
+          <button class="btn toggle" data-listen="wait" title="The sheet waits until you play each chord">Wait</button>
+        </div>
       </div>
 
       <button class="btn settings-toggle" id="settings-toggle">Settings</button>
@@ -560,16 +812,34 @@
       </div>
       <div class="control-group">
         <label>Adventurousness</label>
-        <input type="range" id="adventurousness" min="0" max="100" value="30">
+        <input type="range" id="adventurousness" min="0" max="100" value="15">
       </div>
       <div class="control-group">
         <label>Extension Complexity</label>
-        <input type="range" id="complexity" min="0" max="100" value="50">
+        <input type="range" id="complexity" min="0" max="100" value="20">
       </div>
       <div class="control-group">
         <label>Two-Chord Bars</label>
-        <input type="range" id="two-chord" min="0" max="50" value="15">
+        <input type="range" id="two-chord" min="0" max="50" value="8">
       </div>
+      <div class="control-group">
+        <label for="match-level">Chord counts when you play</label>
+        <select id="match-level">
+          <option value="guide">Guide tones (3rd &amp; 7th)</option>
+          <option value="shell">Shell (root, 3rd, 7th)</option>
+          <option value="full">Full chord</option>
+        </select>
+      </div>
+      <div class="control-group">
+        <label for="hint-mode">Keyboard hints</label>
+        <select id="hint-mode">
+          <option value="none">None</option>
+          <option value="guide">Guide tones</option>
+          <option value="voicing">Rootless voicing</option>
+        </select>
+      </div>
+      <label class="check"><input type="checkbox" id="analysis-toggle" checked> Analysis marks</label>
+      <label class="check"><input type="checkbox" id="monitor-toggle" checked> Hear my notes</label>
       <div class="shortcuts">
         <span>Space</span> play/pause
         <span>→</span> next bar
@@ -578,8 +848,13 @@
     </div>
   </footer>
 
+  <script src="theory.js"></script>
   <script src="engine.js"></script>
+  <script src="audio.js"></script>
   <script src="bass.js"></script>
+  <script src="rhythm.js"></script>
+  <script src="input.js"></script>
+  <script src="analysis.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

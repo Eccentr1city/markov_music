@@ -7,11 +7,8 @@
  * 3. Chord realization with context-aware voicing
  */
 
-const NOTES = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'];
-const ENHARMONIC = {
-    'C#': 'Db', 'D#': 'Eb', 'E#': 'F', 'F#': 'Gb', 'G#': 'Ab', 'A#': 'Bb', 'B#': 'C',
-    'Cb': 'B', 'Fb': 'E'
-};
+// Spelling and chord contents live in theory.js
+const _T = typeof Theory !== 'undefined' ? Theory : require('./theory.js');
 
 // Scale degree intervals from root (in semitones) for major
 const MAJOR_DEGREES = {
@@ -188,6 +185,18 @@ const APPROACH_SEQUENCES = {
 
 const APPROACH_PROBABILITY = 0.12;
 
+// ─── Entering a new key ─────────────────────────────────────────────────────
+// A modulation is prepared by a cadence in the NEW key rather than a bare jump.
+
+const MODULATION_ENTRIES = {
+    'ii-V-I': 0.70,
+    'V-I': 0.20,
+    'direct': 0.10
+};
+
+// Don't change key again until the last one has had a chance to settle
+const MIN_CHORDS_BETWEEN_MODULATIONS = 6;
+
 // ─── Key modulation targets ─────────────────────────────────────────────────
 
 const KEY_MODULATIONS = {
@@ -211,8 +220,8 @@ const QUALITY_OPTIONS = {
     // Context-aware: dominant resolving to major target
     dominantToMajor: ['7', '9', '13', '7#11', 'sus4'],
     minor: ['m7', 'm9', 'm11', 'm6', 'm69'],
-    halfDim: ['m7b5', 'ø7'],
-    diminished: ['dim7', '°7']
+    halfDim: ['m7b5'],
+    diminished: ['dim7']
 };
 
 // ─── Engine ─────────────────────────────────────────────────────────────────
@@ -221,9 +230,9 @@ class MarkovJazzEngine {
     constructor(settings = {}) {
         this.settings = {
             keyStability: settings.keyStability ?? 0.85,
-            adventurousness: settings.adventurousness ?? 0.30,
-            complexity: settings.complexity ?? 0.50,
-            twoChordProbability: settings.twoChordProbability ?? 0.15
+            adventurousness: settings.adventurousness ?? 0.15,
+            complexity: settings.complexity ?? 0.20,
+            twoChordProbability: settings.twoChordProbability ?? 0.08
         };
 
         this.reset();
@@ -237,15 +246,15 @@ class MarkovJazzEngine {
         this.history = [];
         this.recentDegrees = [];
         this.approachQueue = [];
+        this.chordsSinceModulation = 0;
     }
 
     randomKey() {
         const roots = ['C', 'F', 'Bb', 'Eb', 'Ab', 'G', 'D', 'A'];
         const modes = ['major', 'major', 'major', 'minor']; // Bias toward major
-        return {
-            root: roots[Math.floor(Math.random() * roots.length)],
-            mode: modes[Math.floor(Math.random() * modes.length)]
-        };
+        const root = roots[Math.floor(Math.random() * roots.length)];
+        const mode = modes[Math.floor(Math.random() * modes.length)];
+        return { root: _T.keyName(_T.pitchClass(root), mode), mode };
     }
 
     updateSettings(settings) {
@@ -261,10 +270,11 @@ class MarkovJazzEngine {
         const hasTwoChords = Math.random() < this.settings.twoChordProbability;
         const count = hasTwoChords ? 2 : 1;
 
-        // Phase 1: Generate degree sequence
-        const degrees = [];
+        // Phase 1: Generate degree sequence, remembering the key each chord belongs to
+        const steps = [];
         for (let i = 0; i < count; i++) {
             this.maybeModulate();
+            this.chordsSinceModulation++;
 
             const nextDegree = this.getNextDegree();
             this.previousDegree = this.currentDegree;
@@ -274,16 +284,27 @@ class MarkovJazzEngine {
             this.recentDegrees.push(nextDegree);
             if (this.recentDegrees.length > 8) this.recentDegrees.shift();
 
-            degrees.push(nextDegree);
+            // The same chord twice in a bar is just a one-chord bar
+            const first = steps[0];
+            if (first && first.degree === nextDegree &&
+                first.key.root === this.currentKey.root && first.key.mode === this.currentKey.mode) {
+                continue;
+            }
+
+            steps.push({ degree: nextDegree, key: { ...this.currentKey } });
         }
 
-        // Phase 2: Realize chords with context (knowing what follows)
-        const chords = degrees.map((degree, idx) => {
-            const nextHint = idx < degrees.length - 1
-                ? degrees[idx + 1]
+        // Phase 2: Realize chords with context (knowing what follows), each in
+        // its own key – a modulation can fall between the two chords of a bar
+        const barKey = this.currentKey;
+        const chords = steps.map((step, idx) => {
+            const nextHint = idx < steps.length - 1
+                ? steps[idx + 1].degree
                 : this.peekLikelyNextDegree();
-            return this.realizeChord(degree, nextHint);
+            this.currentKey = step.key;
+            return this.realizeChord(step.degree, nextHint);
         });
+        this.currentKey = barKey;
 
         const keyChanged = previousKey.root !== this.currentKey.root ||
             previousKey.mode !== this.currentKey.mode;
@@ -302,10 +323,14 @@ class MarkovJazzEngine {
     // ── Key modulation ──────────────────────────────────────────────────────
 
     maybeModulate() {
+        // Never interrupt a queued cadence, and let each key settle first
+        if (this.approachQueue.length > 0) return;
+        if (this.chordsSinceModulation < MIN_CHORDS_BETWEEN_MODULATIONS) return;
+
         const modulationChance = 1 - this.settings.keyStability;
 
         // More likely to modulate after a cadence (landing on I)
-        const postCadence = this.currentDegree === 'I' || this.currentDegree === 'i';
+        const postCadence = this.currentDegree === 'I';
         const effectiveChance = postCadence ? modulationChance * 2 : modulationChance;
 
         if (Math.random() < effectiveChance) {
@@ -315,51 +340,58 @@ class MarkovJazzEngine {
 
     modulate() {
         const type = this.weightedRandom(KEY_MODULATIONS);
-        const currentRoot = NOTES.indexOf(this.normalizeNote(this.currentKey.root));
+        const currentRoot = _T.pitchClass(this.currentKey.root);
         let newRoot, newMode;
 
         switch (type) {
             case 'fifth_up':
-                newRoot = NOTES[(currentRoot + 7) % 12];
+                newRoot = (currentRoot + 7) % 12;
                 newMode = this.currentKey.mode;
                 break;
             case 'fifth_down':
-                newRoot = NOTES[(currentRoot + 5) % 12];
+                newRoot = (currentRoot + 5) % 12;
                 newMode = this.currentKey.mode;
                 break;
             case 'relative':
                 if (this.currentKey.mode === 'major') {
-                    newRoot = NOTES[(currentRoot + 9) % 12];
+                    newRoot = (currentRoot + 9) % 12;
                     newMode = 'minor';
                 } else {
-                    newRoot = NOTES[(currentRoot + 3) % 12];
+                    newRoot = (currentRoot + 3) % 12;
                     newMode = 'major';
                 }
                 break;
             case 'parallel':
-                newRoot = this.currentKey.root;
+                newRoot = currentRoot;
                 newMode = this.currentKey.mode === 'major' ? 'minor' : 'major';
                 break;
             case 'tritone':
-                newRoot = NOTES[(currentRoot + 6) % 12];
+                newRoot = (currentRoot + 6) % 12;
                 newMode = this.currentKey.mode;
                 break;
             case 'step_up':
-                newRoot = NOTES[(currentRoot + 2) % 12];
+                newRoot = (currentRoot + 2) % 12;
                 newMode = this.currentKey.mode;
                 break;
             case 'step_down':
-                newRoot = NOTES[(currentRoot + 10) % 12];
+                newRoot = (currentRoot + 10) % 12;
                 newMode = this.currentKey.mode;
                 break;
             default:
                 return;
         }
 
-        this.currentKey = { root: newRoot, mode: newMode };
-        // After modulation, we often land on I of the new key
-        if (Math.random() < 0.6) {
-            this.currentDegree = 'I';
+        this.currentKey = { root: _T.keyName(newRoot, newMode), mode: newMode };
+        this.chordsSinceModulation = 0;
+
+        // Establish the new key with a cadence in it
+        const entry = this.weightedRandom(MODULATION_ENTRIES);
+        if (entry === 'ii-V-I') {
+            this.approachQueue = ['ii', 'V', 'I'];
+        } else if (entry === 'V-I') {
+            this.approachQueue = ['V', 'I'];
+        } else {
+            this.approachQueue = ['I'];
         }
     }
 
@@ -433,6 +465,9 @@ class MarkovJazzEngine {
      * Used to give context-aware chord quality hints.
      */
     peekLikelyNextDegree() {
+        // A queued cadence tells us exactly what's coming
+        if (this.approachQueue.length > 0) return this.approachQueue[0];
+
         // Check second-order first
         if (this.previousDegree) {
             const key = `${this.previousDegree}→${this.currentDegree}`;
@@ -507,15 +542,16 @@ class MarkovJazzEngine {
 
     realizeChord(degree, nextDegreeHint = null) {
         const rootInterval = this.getDegreeInterval(degree);
-        const keyRoot = NOTES.indexOf(this.normalizeNote(this.currentKey.root));
-        const chordRoot = NOTES[(keyRoot + rootInterval) % 12];
+        const chordRoot = _T.spellDegree(this.currentKey.root, degree, rootInterval);
 
         const quality = this.getChordQuality(degree, nextDegreeHint);
-        const displayDegree = this.formatDegree(degree);
+        const displayDegree = this.formatDegree(degree, quality);
 
         return {
             root: chordRoot,
+            rootPc: _T.pitchClass(chordRoot),
             quality: quality,
+            family: _T.family(quality),
             degree: displayDegree,
             fullName: this.formatChordName(chordRoot, quality)
         };
@@ -609,40 +645,26 @@ class MarkovJazzEngine {
 
     // ── Formatting ──────────────────────────────────────────────────────────
 
-    formatDegree(degree) {
+    formatDegree(degree, quality = null) {
         const replacements = {
             'bII': '♭II', 'bIII': '♭III', 'bVI': '♭VI', 'bVII': '♭VII',
             'bV': '♭V', '#IV': '♯IV'
         };
-        return replacements[degree] || degree;
+        let display = replacements[degree] || degree;
+
+        // The tables key the tonic as 'I' in both modes; show a minor tonic as 'i'
+        const family = quality ? _T.family(quality) : null;
+        if (degree === 'I' && family === 'min') display = 'i';
+        if (family === 'hdim') display += 'ø';
+
+        return display;
     }
 
     formatChordName(root, quality) {
-        let q = quality;
-
-        q = q.replace('maj7', 'Δ7')
-            .replace('maj9', 'Δ9')
-            .replace('m7b5', 'ø7')
-            .replace('dim7', '°7')
-            .replace('7alt', '7alt')
-            .replace('7#11', '7♯11')
-            .replace('7b9', '7♭9')
-            .replace('7#9', '7♯9')
-            .replace('m7', '-7')
-            .replace('m9', '-9')
-            .replace('m11', '-11')
-            .replace('m6', '-6')
-            .replace('m69', '-6/9')
-            .replace('69', '6/9');
-
-        return { root, quality: q };
+        return { root: _T.pretty(root), quality: _T.displayQuality(quality) };
     }
 
     // ── Utilities ───────────────────────────────────────────────────────────
-
-    normalizeNote(note) {
-        return ENHARMONIC[note] || note;
-    }
 
     weightedRandom(weights) {
         const entries = Object.entries(weights);
@@ -666,4 +688,5 @@ class MarkovJazzEngine {
     }
 }
 
-window.MarkovJazzEngine = MarkovJazzEngine;
+if (typeof window !== 'undefined') window.MarkovJazzEngine = MarkovJazzEngine;
+if (typeof module !== 'undefined') module.exports = MarkovJazzEngine;

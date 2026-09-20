@@ -1,151 +1,270 @@
 /**
- * Bass Player - Sampled acoustic bass using FluidR3 SoundFont
- * Loads real acoustic bass samples and plays chord roots
+ * Bass Player - sampled acoustic bass (FluidR3 GM, CC BY 3.0, vendored in samples/bass)
+ *
+ * Two feels:
+ *   'two'  – roots on beats 1 and 3
+ *   'walk' – a quarter-note walking line that aims for the next chord's root
+ *
+ * Samples are stored every minor third; notes in between are pitch-shifted
+ * by at most a semitone.
  */
 
-const BASS_NOTES = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'];
-const BASS_OCTAVE = 2; // Jazz bass register (~65-130 Hz)
-const SAMPLE_BASE_URL = 'https://gleitz.github.io/midi-js-soundfonts/FluidR3_GM/acoustic_bass-mp3/';
+const BASS_SAMPLE_NOTES = { E1: 28, G1: 31, Bb1: 34, Db2: 37, E2: 40, G2: 43, Bb2: 46, Db3: 49, E3: 52, G3: 55 };
+const BASS_LOCAL_URL = 'samples/bass/';
+const BASS_REMOTE_URL = 'https://gleitz.github.io/midi-js-soundfonts/FluidR3_GM/acoustic_bass-mp3/';
+
+const BASS_LOW = 28;       // E1, the open E string
+const BASS_HIGH = 55;      // G3
+const BASS_ROOT_HIGH = 47; // keep roots down where they sound like roots
 
 class BassPlayer {
     constructor() {
-        this.audioContext = null;
-        this.samples = {};       // note name → AudioBuffer
-        this.enabled = false;
+        this.samples = {};   // midi → AudioBuffer
+        this.style = 'off';  // 'off' | 'two' | 'walk'
         this.loaded = false;
-        this.loading = false;
-        this.volume = 0.8;
-        this.currentSource = null;
-        this.currentGain = null;
+        this.loading = null;
+        this.volume = 0.85;
+        this.voices = [];
+        this.lastNote = null;
     }
 
-    /**
-     * Initialize audio context and begin loading samples.
-     * Must be called from a user gesture (click/tap) on mobile.
-     */
-    async init() {
-        if (this.audioContext) return;
+    get enabled() {
+        return this.style !== 'off';
+    }
 
-        try {
-            this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        } catch (e) {
-            console.warn('BassPlayer: Web Audio API not supported', e);
+    /** Must be called from a user gesture the first time (creates audio). */
+    async setStyle(style) {
+        this.style = style;
+        if (style === 'off') {
+            this.stopAll();
             return;
         }
-
+        if (!audioCore.ensure()) return;
         await this.loadSamples();
     }
 
-    /**
-     * Load all 12 bass samples for the target octave.
-     * Each sample is ~20-40KB, so ~300KB total — fast even on mobile.
-     */
-    async loadSamples() {
-        if (this.loading || this.loaded) return;
-        this.loading = true;
+    loadSamples() {
+        if (this.loaded) return Promise.resolve();
+        if (this.loading) return this.loading;
 
-        const loadPromises = BASS_NOTES.map(async (note) => {
-            const url = `${SAMPLE_BASE_URL}${note}${BASS_OCTAVE}.mp3`;
-            try {
-                const response = await fetch(url);
-                if (!response.ok) throw new Error(`HTTP ${response.status}`);
-                const arrayBuffer = await response.arrayBuffer();
-                const audioBuffer = await this.audioContext.decodeAudioData(arrayBuffer);
-                this.samples[note] = audioBuffer;
-            } catch (e) {
-                console.warn(`BassPlayer: Failed to load ${note}${BASS_OCTAVE}`, e);
+        const ctx = audioCore.ctx;
+        const fetchSample = async (name) => {
+            // Local first; the remote copy covers opening index.html from disk,
+            // where fetch() of a relative file is blocked.
+            for (const base of [BASS_LOCAL_URL, BASS_REMOTE_URL]) {
+                try {
+                    const response = await fetch(`${base}${name}.mp3`);
+                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                    return await ctx.decodeAudioData(await response.arrayBuffer());
+                } catch (e) {
+                    // try the next source
+                }
             }
+            console.warn(`BassPlayer: failed to load ${name}`);
+            return null;
+        };
+
+        this.loading = Promise.all(
+            Object.entries(BASS_SAMPLE_NOTES).map(async ([name, midi]) => {
+                const buffer = await fetchSample(name);
+                if (buffer) this.samples[midi] = buffer;
+            })
+        ).then(() => {
+            this.loaded = Object.keys(this.samples).length > 0;
+            this.loading = null;
         });
 
-        await Promise.all(loadPromises);
-
-        const loadedCount = Object.keys(this.samples).length;
-        console.log(`BassPlayer: Loaded ${loadedCount}/${BASS_NOTES.length} samples`);
-
-        this.loaded = loadedCount > 0;
-        this.loading = false;
+        return this.loading;
     }
 
+    // ── Playback ────────────────────────────────────────────────────────────
+
     /**
-     * Play a bass note by name (e.g. "C", "Eb", "Gb").
-     * Fades out the previous note smoothly before starting the new one.
+     * Schedule one note on the audio clock. It rings until `duration`, then
+     * fades quickly so consecutive notes don't smear.
      */
-    play(noteName) {
-        if (!this.enabled || !this.loaded || !this.audioContext) return;
+    playNote(midi, time, duration) {
+        if (!this.enabled || !this.loaded) return;
+        const ctx = audioCore.ctx;
 
-        const buffer = this.samples[noteName];
-        if (!buffer) return;
+        // Nearest stored sample, shifted by playback rate
+        let sampleMidi = null;
+        for (const m of Object.keys(this.samples).map(Number)) {
+            if (sampleMidi === null || Math.abs(m - midi) < Math.abs(sampleMidi - midi)) sampleMidi = m;
+        }
+        if (sampleMidi === null) return;
 
-        // Fade out previous note
-        this.stopCurrent();
+        const source = ctx.createBufferSource();
+        source.buffer = this.samples[sampleMidi];
+        source.playbackRate.value = Math.pow(2, (midi - sampleMidi) / 12);
 
-        // Create new source
-        const source = this.audioContext.createBufferSource();
-        source.buffer = buffer;
-
-        // Gain node for volume + fade-out control
-        const gain = this.audioContext.createGain();
-        gain.gain.setValueAtTime(this.volume, this.audioContext.currentTime);
+        const gain = ctx.createGain();
+        const end = time + duration;
+        gain.gain.setValueAtTime(this.volume, time);
+        gain.gain.setValueAtTime(this.volume, Math.max(time, end - 0.04));
+        gain.gain.linearRampToValueAtTime(0, end);
 
         source.connect(gain);
-        gain.connect(this.audioContext.destination);
+        gain.connect(audioCore.master);
+        source.start(time);
+        source.stop(end + 0.02);
 
-        source.start(0);
-
-        this.currentSource = source;
-        this.currentGain = gain;
-
-        // Clean up reference when sample ends naturally
+        const voice = { source, gain };
+        this.voices.push(voice);
         source.onended = () => {
-            if (this.currentSource === source) {
-                this.currentSource = null;
-                this.currentGain = null;
-            }
+            this.voices = this.voices.filter(v => v !== voice);
         };
     }
 
-    /**
-     * Smoothly fade out the current note (short ~50ms fade to avoid clicks).
-     */
-    stopCurrent() {
-        if (this.currentGain && this.currentSource) {
-            const now = this.audioContext.currentTime;
+    /** Play a root right now (wait mode: you land on a chord, the bass answers). */
+    playRootNow(chord) {
+        if (!this.enabled || !this.loaded) return;
+        const midi = this.nearest(chord.rootPc, this.lastNote ?? 40, BASS_LOW, BASS_ROOT_HIGH);
+        this.lastNote = midi;
+        this.stopAll();
+        this.playNote(midi, audioCore.now + 0.01, 1.8);
+    }
+
+    stopAll() {
+        if (!audioCore.ctx) return;
+        const now = audioCore.now;
+        for (const { source, gain } of this.voices) {
             try {
-                this.currentGain.gain.cancelScheduledValues(now);
-                this.currentGain.gain.setValueAtTime(this.currentGain.gain.value, now);
-                this.currentGain.gain.linearRampToValueAtTime(0, now + 0.05);
-                this.currentSource.stop(now + 0.06);
+                gain.gain.cancelScheduledValues(now);
+                gain.gain.setValueAtTime(gain.gain.value, now);
+                gain.gain.linearRampToValueAtTime(0, now + 0.05);
+                source.stop(now + 0.06);
             } catch (e) {
-                // Source may have already ended
+                // already ended
             }
         }
-        this.currentSource = null;
-        this.currentGain = null;
+        this.voices = [];
     }
 
-    setEnabled(enabled) {
-        this.enabled = enabled;
-        if (enabled && this.audioContext && this.audioContext.state === 'suspended') {
-            this.audioContext.resume();
-        }
-        if (!enabled) {
-            this.stopCurrent();
-        }
+    reset() {
+        this.stopAll();
+        this.lastNote = null;
     }
+
+    // ── Line writing ────────────────────────────────────────────────────────
 
     /**
-     * Toggle bass on/off. Lazy-loads samples on first enable.
-     * Returns a Promise that resolves to the new enabled state.
+     * Decide the bass notes for one bar.
+     * Returns [{ beat: 0-3, midi }]. `nextChord` is the first chord of the
+     * following bar, which the line walks towards.
      */
-    async toggle() {
-        const willEnable = !this.enabled;
+    planBar(bar, nextChord) {
+        const chords = bar.chords;
+        const notes = this.style === 'two'
+            ? this.planTwoFeel(chords)
+            : this.planWalk(chords, nextChord);
 
-        if (willEnable && !this.loaded && !this.loading) {
-            await this.init();
+        this.lastNote = notes[notes.length - 1].midi;
+        return notes;
+    }
+
+    planTwoFeel(chords) {
+        const first = this.rootNote(chords[0], this.lastNote);
+        const second = chords.length === 2 ? this.rootNote(chords[1], first) : first;
+        return [{ beat: 0, midi: first }, { beat: 2, midi: second }];
+    }
+
+    planWalk(chords, nextChord) {
+        const nextPc = nextChord ? nextChord.rootPc : chords[0].rootPc;
+
+        if (chords.length === 2) {
+            const r1 = this.rootNote(chords[0], this.lastNote);
+            const r2 = this.targetRoot(chords[1].rootPc, r1);
+            const a1 = this.approach(r2, r1, chords[0]);
+            const a2 = this.approach(this.targetRoot(nextPc, r2), r2, chords[1]);
+            return [r1, a1, r2, a2].map((midi, beat) => ({ beat, midi }));
         }
 
-        this.setEnabled(willEnable);
-        return this.enabled;
+        const chord = chords[0];
+        const root = this.rootNote(chord, this.lastNote);
+        const target = this.targetRoot(nextPc, root);
+        const last = this.approach(target, root, chord);
+        const [second, third] = this.connect(root, last, chord);
+        return [root, second, third, last].map((midi, beat) => ({ beat, midi }));
+    }
+
+    /** Beats 2 and 3: a chord-tone shape that ends near the approach note. */
+    connect(root, approach, chord) {
+        const q = Theory.quality(chord.quality);
+        const third = q.guide[0] === 5 ? 5 : q.core[1];
+        const fifth = q.scale.includes(7) ? 7 : 6;
+        const seventh = q.core[q.core.length - 1];
+        const second = q.scale[1];
+
+        const shapes = [
+            [second, third],            // R 2 3
+            [third, fifth],             // R 3 5
+            [fifth, third],             // R 5 3
+            [fifth, seventh],           // R 5 7
+            [third, second],            // R 3 2
+            [seventh - 12, fifth - 12], // R 7 5 descending
+            [fifth - 12, seventh - 12], // R 5 7 from below
+            [12, seventh],              // R 8 7
+        ].map(([a, b]) => [root + a, root + b]);
+
+        const usable = shapes.filter(([a, b]) =>
+            a >= BASS_LOW && b >= BASS_LOW && a <= BASS_HIGH && b <= BASS_HIGH &&
+            b !== approach && a !== root);
+
+        if (!usable.length) return [root + fifth, root + third];
+
+        // Prefer shapes that leave a small step into the approach note
+        const scored = usable
+            .map(shape => ({ shape, leap: Math.abs(shape[1] - approach) }))
+            .sort((x, y) => x.leap - y.leap);
+        const best = scored.filter(s => s.leap <= scored[0].leap + 2);
+        return best[Math.floor(Math.random() * best.length)].shape;
+    }
+
+    /** Beat 4: lean into the next root from a half-step, a fifth, or a scale step. */
+    approach(target, from, chord) {
+        const scale = Theory.quality(chord.quality).scale.map(i => (chord.rootPc + i) % 12);
+        const fromBelow = from <= target;
+
+        const options = [
+            { midi: target + (fromBelow ? -1 : 1), weight: 0.45 },
+            { midi: target + (fromBelow ? 1 : -1), weight: 0.20 },
+            { midi: target + 7, weight: 0.10 },
+            { midi: target - 5, weight: 0.10 },
+        ];
+        for (const step of [-2, 2]) {
+            if (scale.includes((((target + step) % 12) + 12) % 12)) {
+                options.push({ midi: target + step, weight: 0.15 });
+            }
+        }
+
+        const usable = options.filter(o => o.midi >= BASS_LOW && o.midi <= BASS_HIGH && o.midi !== from);
+        if (!usable.length) return target + 1;
+
+        let pick = Math.random() * usable.reduce((s, o) => s + o.weight, 0);
+        for (const o of usable) {
+            pick -= o.weight;
+            if (pick <= 0) return o.midi;
+        }
+        return usable[0].midi;
+    }
+
+    rootNote(chord, reference) {
+        return this.nearest(chord.rootPc, reference ?? 38, BASS_LOW, BASS_ROOT_HIGH);
+    }
+
+    /** Where the next root will land, so the approach aims at the right octave. */
+    targetRoot(pc, reference) {
+        return this.nearest(pc, reference, BASS_LOW, BASS_ROOT_HIGH);
+    }
+
+    nearest(pc, reference, low, high) {
+        let best = null;
+        for (let midi = low; midi <= high; midi++) {
+            if (midi % 12 !== pc) continue;
+            if (best === null || Math.abs(midi - reference) < Math.abs(best - reference)) best = midi;
+        }
+        return best;
     }
 }
 
