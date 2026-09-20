@@ -22,8 +22,9 @@ const DEGREE_STEPS = {
     'bV': 4, 'V': 4, 'bVI': 5, 'VI': 5, 'bVII': 6, 'VII': 6
 };
 
-// Spellings nobody wants to read on a chart
-const AWKWARD = { 'B#': 'C', 'E#': 'F', 'Cb': 'B', 'Fb': 'E' };
+// Spellings nobody wants to read on a chart, however correct. A# is what the
+// letter arithmetic gives for #IV of E or II of G# minor; every chart says Bb.
+const AWKWARD = { 'B#': 'C', 'E#': 'F', 'Cb': 'B', 'Fb': 'E', 'A#': 'Bb' };
 
 // ─── Chord qualities ────────────────────────────────────────────────────────
 // All intervals are semitones above the root.
@@ -119,9 +120,9 @@ const Theory = {
         const pc = (key.pc + semitones) % 12;
         const acc = ((pc - LETTER_PC[letter] + 18) % 12) - 6;
 
-        if (Math.abs(acc) >= 2) return acc > 0 ? SHARP_NAMES[pc] : FLAT_NAMES[pc];
-
-        const name = letter + (acc > 0 ? '#' : acc < 0 ? 'b' : '');
+        const name = Math.abs(acc) >= 2
+            ? (acc > 0 ? SHARP_NAMES[pc] : FLAT_NAMES[pc])
+            : letter + (acc > 0 ? '#' : acc < 0 ? 'b' : '');
         return AWKWARD[name] || name;
     },
 
