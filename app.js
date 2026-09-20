@@ -55,7 +55,7 @@ class MarkovJazzApp {
         this.lastHint = null;
         this.waitTimer = null;
         this.freshAttack = false;
-        this.wrongNotes = new Set();    // held notes that didn't fit when struck
+        this.verdicts = new Map();      // held note → 'chord' | 'scale' | 'outside', as struck
 
         this.initUI();
         this.loadSettings();
@@ -760,11 +760,10 @@ class MarkovJazzApp {
             this.freshAttack = true;
             // Judged once, as struck. Re-judging held notes whenever the sheet
             // moves would turn the 7th of E7 red the moment it resolves to A.
-            if (this.noteIsWrong(event.midi)) this.wrongNotes.add(event.midi);
-            else this.wrongNotes.delete(event.midi);
+            this.verdicts.set(event.midi, this.judgeNote(event.midi));
         } else {
             this.keys.noteOff(event.midi);
-            this.wrongNotes.delete(event.midi);
+            this.verdicts.delete(event.midi);
         }
 
         this.updateKeyboard();
@@ -774,12 +773,12 @@ class MarkovJazzApp {
     }
 
     /**
-     * Does this note clash with what you could reasonably be playing right now?
-     * That's the current chord – or, in time, a chord whose window is already
-     * open for an early push.
+     * How a note sits against what you could reasonably be playing right now:
+     * the current chord – or, in time, a chord whose window is already open
+     * for an early push. The kindest reading wins.
      */
-    noteIsWrong(midi) {
-        if (this.listenMode === 'off') return false;
+    judgeNote(midi) {
+        if (this.listenMode === 'off') return null;
 
         const candidates = [this.getCurrentChord()];
         if (this.listenMode === 'time' && this.isPlaying) {
@@ -790,7 +789,8 @@ class MarkovJazzApp {
             }
         }
 
-        return !candidates.some(chord => Theory.allowedPcs(chord).includes(midi % 12));
+        const verdicts = candidates.map(chord => Theory.classify(chord, midi));
+        return ['chord', 'scale', 'outside'].find(v => verdicts.includes(v));
     }
 
     setResult(barIndex, chordIndex, result) {
@@ -907,8 +907,8 @@ class MarkovJazzApp {
         if (this.keyboardPanel.hidden) return;
 
         const hints = this.hintsFor(this.currentBarIndex, this.currentChordIndex);
-        const wrong = this.listenMode === 'off' ? new Set() : this.wrongNotes;
-        this.keyboard.update(this.input.notes, wrong, hints);
+        const verdicts = this.listenMode === 'off' ? new Map() : this.verdicts;
+        this.keyboard.update(this.input.notes, verdicts, hints);
     }
 }
 

@@ -26,6 +26,7 @@
       --chord-current: #252530;
       --hit: #8fcf9f;
       --miss: #c97a72;
+      --tension: #e0a458;
       --ivory: #d9d4c7;
     }
 
@@ -533,6 +534,15 @@
 
     .key.down {
       background: var(--accent);
+    }
+
+    /* While listening: chord tone / scale tone or tension / no excuse */
+    .key.down.in-chord {
+      background: var(--hit);
+    }
+
+    .key.down.in-scale {
+      background: var(--tension);
     }
 
     .key.down.wrong {

@@ -32,7 +32,7 @@ Playback starts with a one-bar count-in. Everything is scheduled on the Web Audi
 - **In time** — play each chord somewhere in its slot (up to an eighth early counts, so you can push). Chords turn green or red as they go by.
 - **Wait** — no tempo. The sheet advances when you play the current chord.
 
-What counts as "playing the chord" is set in Settings: **guide tones** (3rd & 7th — the default, since the bass has the root), **shell** (root, 3rd, 7th) or the **full chord**. Extra notes are fine as long as they're chord tones or sensible tensions for that chord; anything else shows red on the keyboard and doesn't count. The sustain pedal is ignored — it's about what your fingers are on.
+What counts as "playing the chord" is set in Settings: **guide tones** (3rd & 7th — the default, since the bass has the root), **shell** (root, 3rd, 7th) or the **full chord**. The keyboard colours each note as you strike it: **green** for a tone the chord symbol names, **amber** for a tension or a note from the chord's scale, **red** for a note with no plausible excuse. Green and amber notes are fine to add; a red note stops the chord from counting. The sustain pedal is ignored — it's about what your fingers are on.
 
 **Keyboard hints** can show the guide tones or a rootless voicing for the current chord.
 

@@ -181,18 +181,22 @@ class Keyboard {
     }
 
     /**
-     * @param {number[]} held   MIDI notes currently down
-     * @param {Set}      wrong  held MIDI notes to show as clashing
-     * @param {number[]} hints  MIDI notes to suggest
+     * @param {number[]} held      MIDI notes currently down
+     * @param {Map}      verdicts  held note → 'chord' | 'scale' | 'outside'
+     *                             (empty when nothing is being judged)
+     * @param {number[]} hints     MIDI notes to suggest
      */
-    update(held, wrong, hints) {
+    update(held, verdicts, hints) {
         const heldSet = new Set(held);
         const hintSet = new Set(hints);
 
         for (const [midi, key] of this.keys) {
             const down = heldSet.has(midi);
             key.classList.toggle('down', down);
-            key.classList.toggle('wrong', down && wrong.has(midi));
+            const verdict = down ? verdicts.get(midi) : null;
+            key.classList.toggle('in-chord', verdict === 'chord');
+            key.classList.toggle('in-scale', verdict === 'scale');
+            key.classList.toggle('wrong', verdict === 'outside');
             key.classList.toggle('hint', hintSet.has(midi) && !down);
         }
     }

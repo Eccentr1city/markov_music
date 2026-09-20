@@ -28,6 +28,7 @@ const AWKWARD = { 'B#': 'C', 'E#': 'F', 'Cb': 'B', 'Fb': 'E' };
 // ─── Chord qualities ────────────────────────────────────────────────────────
 // All intervals are semitones above the root.
 //   guide    – the tones that define the sound (3rd & 7th, or their stand-ins)
+//   tones    – everything the chord symbol actually names
 //   core     – the plain four-note chord
 //   allowed  – chord tones plus the tensions a comping pianist might add
 //   voicing  – rootless "type A" voicing, ascending from the 3rd
@@ -49,29 +50,29 @@ const LOCRIAN = [0, 1, 3, 5, 6, 8, 10];
 const DIMINISHED = [0, 2, 3, 5, 6, 8, 9, 11];
 
 const QUALITIES = {
-    'maj7':    { family: 'maj', guide: [4, 11], core: [0, 4, 7, 11], allowed: MAJ_ALLOWED, voicing: [4, 7, 11, 14], scale: IONIAN },
-    'maj9':    { family: 'maj', guide: [4, 11], core: [0, 4, 7, 11], allowed: MAJ_ALLOWED, voicing: [4, 7, 11, 14], scale: IONIAN },
-    '6':       { family: 'maj', guide: [4, 9],  core: [0, 4, 7, 9],  allowed: MAJ_ALLOWED, voicing: [4, 7, 9, 14],  scale: IONIAN },
-    '69':      { family: 'maj', guide: [4, 9],  core: [0, 4, 7, 9],  allowed: MAJ_ALLOWED, voicing: [4, 7, 9, 14],  scale: IONIAN },
-    'maj7#11': { family: 'maj', guide: [4, 11], core: [0, 4, 7, 11], allowed: MAJ_ALLOWED, voicing: [4, 6, 11, 14], scale: LYDIAN },
+    'maj7':    { family: 'maj', tones: [0, 4, 7, 11], guide: [4, 11], core: [0, 4, 7, 11], allowed: MAJ_ALLOWED, voicing: [4, 7, 11, 14], scale: IONIAN },
+    'maj9':    { family: 'maj', tones: [0, 2, 4, 7, 11], guide: [4, 11], core: [0, 4, 7, 11], allowed: MAJ_ALLOWED, voicing: [4, 7, 11, 14], scale: IONIAN },
+    '6':       { family: 'maj', tones: [0, 4, 7, 9], guide: [4, 9],  core: [0, 4, 7, 9],  allowed: MAJ_ALLOWED, voicing: [4, 7, 9, 14],  scale: IONIAN },
+    '69':      { family: 'maj', tones: [0, 2, 4, 7, 9], guide: [4, 9],  core: [0, 4, 7, 9],  allowed: MAJ_ALLOWED, voicing: [4, 7, 9, 14],  scale: IONIAN },
+    'maj7#11': { family: 'maj', tones: [0, 4, 6, 7, 11], guide: [4, 11], core: [0, 4, 7, 11], allowed: MAJ_ALLOWED, voicing: [4, 6, 11, 14], scale: LYDIAN },
 
-    '7':       { family: 'dom', guide: [4, 10], core: [0, 4, 7, 10], allowed: DOM_ALLOWED, voicing: [4, 7, 10, 14], scale: MIXOLYDIAN },
-    '9':       { family: 'dom', guide: [4, 10], core: [0, 4, 7, 10], allowed: DOM_ALLOWED, voicing: [4, 7, 10, 14], scale: MIXOLYDIAN },
-    '13':      { family: 'dom', guide: [4, 10], core: [0, 4, 7, 10], allowed: DOM_ALLOWED, voicing: [4, 9, 10, 14], scale: MIXOLYDIAN },
-    '7#11':    { family: 'dom', guide: [4, 10], core: [0, 4, 7, 10], allowed: DOM_ALLOWED, voicing: [4, 6, 10, 14], scale: LYDIAN_DOM },
-    'sus4':    { family: 'dom', guide: [5, 10], core: [0, 5, 7, 10], allowed: [0, 2, 5, 7, 9, 10], voicing: [5, 9, 10, 14], scale: MIXOLYDIAN },
-    '7b9':     { family: 'dom', guide: [4, 10], core: [0, 4, 7, 10], allowed: [0, 1, 3, 4, 6, 7, 8, 9, 10], voicing: [4, 9, 10, 13], scale: PHRYGIAN_DOM },
-    '7#9':     { family: 'dom', guide: [4, 10], core: [0, 4, 7, 10], allowed: [0, 1, 3, 4, 6, 7, 8, 10], voicing: [4, 8, 10, 15], scale: ALTERED },
-    '7alt':    { family: 'dom', guide: [4, 10], core: [0, 4, 10],    allowed: ALT_ALLOWED, voicing: [4, 8, 10, 15], scale: ALTERED },
+    '7':       { family: 'dom', tones: [0, 4, 7, 10], guide: [4, 10], core: [0, 4, 7, 10], allowed: DOM_ALLOWED, voicing: [4, 7, 10, 14], scale: MIXOLYDIAN },
+    '9':       { family: 'dom', tones: [0, 2, 4, 7, 10], guide: [4, 10], core: [0, 4, 7, 10], allowed: DOM_ALLOWED, voicing: [4, 7, 10, 14], scale: MIXOLYDIAN },
+    '13':      { family: 'dom', tones: [0, 2, 4, 7, 9, 10], guide: [4, 10], core: [0, 4, 7, 10], allowed: DOM_ALLOWED, voicing: [4, 9, 10, 14], scale: MIXOLYDIAN },
+    '7#11':    { family: 'dom', tones: [0, 4, 6, 7, 10], guide: [4, 10], core: [0, 4, 7, 10], allowed: DOM_ALLOWED, voicing: [4, 6, 10, 14], scale: LYDIAN_DOM },
+    'sus4':    { family: 'dom', tones: [0, 5, 7, 10], guide: [5, 10], core: [0, 5, 7, 10], allowed: [0, 2, 5, 7, 9, 10], voicing: [5, 9, 10, 14], scale: MIXOLYDIAN },
+    '7b9':     { family: 'dom', tones: [0, 1, 4, 7, 10], guide: [4, 10], core: [0, 4, 7, 10], allowed: [0, 1, 3, 4, 6, 7, 8, 9, 10], voicing: [4, 9, 10, 13], scale: PHRYGIAN_DOM },
+    '7#9':     { family: 'dom', tones: [0, 3, 4, 7, 10], guide: [4, 10], core: [0, 4, 7, 10], allowed: [0, 1, 3, 4, 6, 7, 8, 10], voicing: [4, 8, 10, 15], scale: ALTERED },
+    '7alt':    { family: 'dom', tones: [0, 1, 3, 4, 6, 8, 10], guide: [4, 10], core: [0, 4, 10],    allowed: ALT_ALLOWED, voicing: [4, 8, 10, 15], scale: ALTERED },
 
-    'm7':      { family: 'min', guide: [3, 10], core: [0, 3, 7, 10], allowed: MIN_ALLOWED, voicing: [3, 7, 10, 14], scale: DORIAN },
-    'm9':      { family: 'min', guide: [3, 10], core: [0, 3, 7, 10], allowed: MIN_ALLOWED, voicing: [3, 7, 10, 14], scale: DORIAN },
-    'm11':     { family: 'min', guide: [3, 10], core: [0, 3, 7, 10], allowed: MIN_ALLOWED, voicing: [3, 5, 10, 14], scale: DORIAN },
-    'm6':      { family: 'min', guide: [3, 9],  core: [0, 3, 7, 9],  allowed: [0, 2, 3, 5, 7, 9, 11], voicing: [3, 7, 9, 14], scale: DORIAN },
-    'm69':     { family: 'min', guide: [3, 9],  core: [0, 3, 7, 9],  allowed: [0, 2, 3, 5, 7, 9, 11], voicing: [3, 7, 9, 14], scale: DORIAN },
+    'm7':      { family: 'min', tones: [0, 3, 7, 10], guide: [3, 10], core: [0, 3, 7, 10], allowed: MIN_ALLOWED, voicing: [3, 7, 10, 14], scale: DORIAN },
+    'm9':      { family: 'min', tones: [0, 2, 3, 7, 10], guide: [3, 10], core: [0, 3, 7, 10], allowed: MIN_ALLOWED, voicing: [3, 7, 10, 14], scale: DORIAN },
+    'm11':     { family: 'min', tones: [0, 2, 3, 5, 7, 10], guide: [3, 10], core: [0, 3, 7, 10], allowed: MIN_ALLOWED, voicing: [3, 5, 10, 14], scale: DORIAN },
+    'm6':      { family: 'min', tones: [0, 3, 7, 9], guide: [3, 9],  core: [0, 3, 7, 9],  allowed: [0, 2, 3, 5, 7, 9, 11], voicing: [3, 7, 9, 14], scale: DORIAN },
+    'm69':     { family: 'min', tones: [0, 2, 3, 7, 9], guide: [3, 9],  core: [0, 3, 7, 9],  allowed: [0, 2, 3, 5, 7, 9, 11], voicing: [3, 7, 9, 14], scale: DORIAN },
 
-    'm7b5':    { family: 'hdim', guide: [3, 10], core: [0, 3, 6, 10], allowed: [0, 2, 3, 5, 6, 8, 10], voicing: [3, 6, 10, 12], scale: LOCRIAN },
-    'dim7':    { family: 'dim', guide: [3, 9],  core: [0, 3, 6, 9],  allowed: DIMINISHED, voicing: [3, 6, 9, 12], scale: DIMINISHED }
+    'm7b5':    { family: 'hdim', tones: [0, 3, 6, 10], guide: [3, 10], core: [0, 3, 6, 10], allowed: [0, 2, 3, 5, 6, 8, 10], voicing: [3, 6, 10, 12], scale: LOCRIAN },
+    'dim7':    { family: 'dim', tones: [0, 3, 6, 9], guide: [3, 9],  core: [0, 3, 6, 9],  allowed: DIMINISHED, voicing: [3, 6, 9, 12], scale: DIMINISHED }
 };
 
 const QUALITY_DISPLAY = {
@@ -152,13 +153,30 @@ const Theory = {
         return intervals.map(i => (chord.rootPc + i) % 12);
     },
 
+    /** Everything with a plausible excuse: chord tones, tensions and the chord's scale. */
     allowedPcs(chord) {
-        return this.quality(chord.quality).allowed.map(i => (chord.rootPc + i) % 12);
+        const q = this.quality(chord.quality);
+        const intervals = new Set([...q.tones, ...q.allowed, ...q.scale]);
+        return [...intervals].map(i => (chord.rootPc + i) % 12);
+    },
+
+    /**
+     * How a note sits against a chord:
+     *   'chord'   – named by the chord symbol
+     *   'scale'   – a tension or scale tone; colourful, but not what was asked for
+     *   'outside' – no plausible excuse
+     */
+    classify(chord, midi) {
+        const q = this.quality(chord.quality);
+        const interval = (((midi - chord.rootPc) % 12) + 12) % 12;
+        if (q.tones.includes(interval)) return 'chord';
+        if (q.allowed.includes(interval) || q.scale.includes(interval)) return 'scale';
+        return 'outside';
     },
 
     /**
      * Does this set of held MIDI notes count as the chord? Every required
-     * tone must be down, and nothing outside the chord's tensions.
+     * tone must be down, and nothing 'outside' (see classify).
      */
     matches(chord, heldMidi, level = 'guide') {
         const held = new Set([...heldMidi].map(m => m % 12));
