@@ -55,6 +55,7 @@ class MarkovJazzApp {
         this.lastHint = null;
         this.waitTimer = null;
         this.freshAttack = false;
+        this.wrongNotes = new Set();    // held notes that didn't fit when struck
 
         this.initUI();
         this.loadSettings();
@@ -757,14 +758,39 @@ class MarkovJazzApp {
         if (event.type === 'on') {
             this.keys.noteOn(event.midi, event.velocity);
             this.freshAttack = true;
+            // Judged once, as struck. Re-judging held notes whenever the sheet
+            // moves would turn the 7th of E7 red the moment it resolves to A.
+            if (this.noteIsWrong(event.midi)) this.wrongNotes.add(event.midi);
+            else this.wrongNotes.delete(event.midi);
         } else {
             this.keys.noteOff(event.midi);
+            this.wrongNotes.delete(event.midi);
         }
 
         this.updateKeyboard();
 
         if (this.listenMode === 'time') this.checkWindows();
         else if (this.listenMode === 'wait') this.checkWait();
+    }
+
+    /**
+     * Does this note clash with what you could reasonably be playing right now?
+     * That's the current chord – or, in time, a chord whose window is already
+     * open for an early push.
+     */
+    noteIsWrong(midi) {
+        if (this.listenMode === 'off') return false;
+
+        const candidates = [this.getCurrentChord()];
+        if (this.listenMode === 'time' && this.isPlaying) {
+            const now = this.clock();
+            const early = EARLY_BEATS * 60 / this.tempo;
+            for (const w of this.windows) {
+                if (now >= w.start - early && now < w.end) candidates.push(w.chord);
+            }
+        }
+
+        return !candidates.some(chord => Theory.allowedPcs(chord).includes(midi % 12));
     }
 
     setResult(barIndex, chordIndex, result) {
@@ -880,10 +906,9 @@ class MarkovJazzApp {
     updateKeyboard() {
         if (this.keyboardPanel.hidden) return;
 
-        const chord = this.getCurrentChord();
-        const allowed = this.listenMode === 'off' ? null : new Set(Theory.allowedPcs(chord));
         const hints = this.hintsFor(this.currentBarIndex, this.currentChordIndex);
-        this.keyboard.update(this.input.notes, allowed, hints);
+        const wrong = this.listenMode === 'off' ? new Set() : this.wrongNotes;
+        this.keyboard.update(this.input.notes, wrong, hints);
     }
 }
 

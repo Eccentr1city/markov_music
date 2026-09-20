@@ -181,18 +181,18 @@ class Keyboard {
     }
 
     /**
-     * @param {number[]} held     MIDI notes currently down
-     * @param {Set}      allowed  pitch classes that fit the current chord (or null)
-     * @param {number[]} hints    MIDI notes to suggest
+     * @param {number[]} held   MIDI notes currently down
+     * @param {Set}      wrong  held MIDI notes to show as clashing
+     * @param {number[]} hints  MIDI notes to suggest
      */
-    update(held, allowed, hints) {
+    update(held, wrong, hints) {
         const heldSet = new Set(held);
         const hintSet = new Set(hints);
 
         for (const [midi, key] of this.keys) {
             const down = heldSet.has(midi);
             key.classList.toggle('down', down);
-            key.classList.toggle('wrong', down && !!allowed && !allowed.has(midi % 12));
+            key.classList.toggle('wrong', down && wrong.has(midi));
             key.classList.toggle('hint', hintSet.has(midi) && !down);
         }
     }
