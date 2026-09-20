@@ -153,10 +153,26 @@ const Theory = {
         return intervals.map(i => (chord.rootPc + i) % 12);
     },
 
-    /** Everything with a plausible excuse: chord tones, tensions and the chord's scale. */
-    allowedPcs(chord) {
+    /**
+     * Tensions a chord earns from where it's going. A dominant resolving down a
+     * fifth to a minor chord borrows that key's harmonic minor, so the b9 and
+     * b13 are fair game even when the symbol just says "7".
+     */
+    contextTensions(chord, next) {
+        if (!next || this.family(chord.quality) !== 'dom') return [];
+
+        const nextFamily = this.family(next.quality);
+        const upAFourth = (next.rootPc - chord.rootPc + 12) % 12 === 5;
+        return upAFourth && (nextFamily === 'min' || nextFamily === 'hdim') ? [1, 8] : [];
+    },
+
+    /**
+     * Everything with a plausible excuse: chord tones, tensions and the chord's
+     * scale. `next` is the chord that follows, if known (see contextTensions).
+     */
+    allowedPcs(chord, next = null) {
         const q = this.quality(chord.quality);
-        const intervals = new Set([...q.tones, ...q.allowed, ...q.scale]);
+        const intervals = new Set([...q.tones, ...q.allowed, ...q.scale, ...this.contextTensions(chord, next)]);
         return [...intervals].map(i => (chord.rootPc + i) % 12);
     },
 
@@ -166,11 +182,12 @@ const Theory = {
      *   'scale'   – a tension or scale tone; colourful, but not what was asked for
      *   'outside' – no plausible excuse
      */
-    classify(chord, midi) {
+    classify(chord, midi, next = null) {
         const q = this.quality(chord.quality);
         const interval = (((midi - chord.rootPc) % 12) + 12) % 12;
         if (q.tones.includes(interval)) return 'chord';
         if (q.allowed.includes(interval) || q.scale.includes(interval)) return 'scale';
+        if (this.contextTensions(chord, next).includes(interval)) return 'scale';
         return 'outside';
     },
 
@@ -178,11 +195,11 @@ const Theory = {
      * Does this set of held MIDI notes count as the chord? Every required
      * tone must be down, and nothing 'outside' (see classify).
      */
-    matches(chord, heldMidi, level = 'guide') {
+    matches(chord, heldMidi, level = 'guide', next = null) {
         const held = new Set([...heldMidi].map(m => m % 12));
         if (held.size === 0) return false;
 
-        const allowed = new Set(this.allowedPcs(chord));
+        const allowed = new Set(this.allowedPcs(chord, next));
         for (const pc of held) if (!allowed.has(pc)) return false;
 
         return this.requiredPcs(chord, level).every(pc => held.has(pc));

@@ -30,9 +30,9 @@ Playback starts with a one-bar count-in. Everything is scheduled on the Web Audi
 ## Listening
 
 - **In time** — play each chord somewhere in its slot (up to an eighth early counts, so you can push). Chords turn green or red as they go by.
-- **Wait** — no tempo. The sheet advances when you play the current chord.
+- **Wait** — no tempo. The sheet advances when you play the current chord, and (if the bass is on) the bass answers with that chord's root.
 
-What counts as "playing the chord" is set in Settings: **guide tones** (3rd & 7th — the default, since the bass has the root), **shell** (root, 3rd, 7th) or the **full chord**. The keyboard colours each note as you strike it: **green** for a tone the chord symbol names, **amber** for a tension or a note from the chord's scale, **red** for a note with no plausible excuse. Green and amber notes are fine to add; a red note stops the chord from counting. The sustain pedal is ignored — it's about what your fingers are on.
+What counts as "playing the chord" is set in Settings: **guide tones** (3rd & 7th — the default, since the bass has the root), **shell** (root, 3rd, 7th) or the **full chord**. The keyboard colours each note as you strike it: **green** for a tone the chord symbol names, **amber** for a tension or a note from the chord's scale, **red** for a note with no plausible excuse. Green and amber notes are fine to add; a red note stops the chord from counting. Context matters: on a dominant resolving down a fifth to a minor chord, the ♭9 and ♭13 are amber even if the symbol just says "7". The sustain pedal is ignored — it's about what your fingers are on.
 
 **Keyboard hints** can show the guide tones or a rootless voicing for the current chord.
 

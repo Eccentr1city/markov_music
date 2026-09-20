@@ -97,6 +97,12 @@ class MarkovJazzApp {
         return this.getBar(this.currentBarIndex);
     }
 
+    /** The chord that follows (bar, chord) – it decides some of the allowed tensions. */
+    chordFollowing(barIndex, chordIndex) {
+        const next = this.chordAfter(barIndex, chordIndex);
+        return this.getBar(next.bar).chords[next.chord];
+    }
+
     getCurrentChord() {
         const bar = this.getCurrentBar();
         return bar.chords[Math.min(this.currentChordIndex, bar.chords.length - 1)];
@@ -780,16 +786,19 @@ class MarkovJazzApp {
     judgeNote(midi) {
         if (this.listenMode === 'off') return null;
 
-        const candidates = [this.getCurrentChord()];
+        const candidates = [{
+            chord: this.getCurrentChord(),
+            next: this.chordFollowing(this.currentBarIndex, this.currentChordIndex)
+        }];
         if (this.listenMode === 'time' && this.isPlaying) {
             const now = this.clock();
             const early = EARLY_BEATS * 60 / this.tempo;
             for (const w of this.windows) {
-                if (now >= w.start - early && now < w.end) candidates.push(w.chord);
+                if (now >= w.start - early && now < w.end) candidates.push(w);
             }
         }
 
-        const verdicts = candidates.map(chord => Theory.classify(chord, midi));
+        const verdicts = candidates.map(({ chord, next }) => Theory.classify(chord, midi, next));
         return ['chord', 'scale', 'outside'].find(v => verdicts.includes(v));
     }
 
@@ -818,6 +827,7 @@ class MarkovJazzApp {
             bar: barIndex,
             chordIndex,
             chord: this.getBar(barIndex).chords[chordIndex],
+            next: this.chordFollowing(barIndex, chordIndex),
             start: time,
             end: Infinity,
             result: null
@@ -836,7 +846,7 @@ class MarkovJazzApp {
             if (now >= w.end) {
                 w.result = 'miss';
                 this.setResult(w.bar, w.chordIndex, 'miss');
-            } else if (now >= w.start - early && Theory.matches(w.chord, held, this.matchLevel)) {
+            } else if (now >= w.start - early && Theory.matches(w.chord, held, this.matchLevel, w.next)) {
                 w.result = 'hit';
                 this.setResult(w.bar, w.chordIndex, 'hit');
             }
@@ -847,9 +857,13 @@ class MarkovJazzApp {
 
     // Wait mode: no clock. The sheet moves when you play the chord.
 
+    currentChordMatches() {
+        const next = this.chordFollowing(this.currentBarIndex, this.currentChordIndex);
+        return Theory.matches(this.getCurrentChord(), this.input.notes, this.matchLevel, next);
+    }
+
     checkWait() {
-        const matching = this.freshAttack &&
-            Theory.matches(this.getCurrentChord(), this.input.notes, this.matchLevel);
+        const matching = this.freshAttack && this.currentChordMatches();
 
         if (!matching) {
             clearTimeout(this.waitTimer);
@@ -862,7 +876,11 @@ class MarkovJazzApp {
         this.waitTimer = setTimeout(() => {
             this.waitTimer = null;
             if (this.listenMode !== 'wait') return;
-            if (!Theory.matches(this.getCurrentChord(), this.input.notes, this.matchLevel)) return;
+            if (!this.currentChordMatches()) return;
+
+            // The bass answers the chord you just landed – not the one coming up,
+            // which would sound against the notes still under your fingers
+            if (this.bass.enabled) this.bass.playRootNow(this.getCurrentChord());
 
             this.setResult(this.currentBarIndex, this.currentChordIndex, 'hit');
             this.advanceChord();
@@ -876,8 +894,6 @@ class MarkovJazzApp {
 
         this.currentChordIndex = next.chord;
         this.goToBar(next.bar);
-
-        if (this.bass.enabled) this.bass.playRootNow(this.getCurrentChord());
     }
 
     // ── On-screen keyboard ──────────────────────────────────────────────────
