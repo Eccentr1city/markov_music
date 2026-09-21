@@ -148,6 +148,7 @@ class DrillMode {
 
         this.log = this.loadLog();
         this.types = new Set(['maj7']);
+        this.mix = false;            // false: one chord type at a time; true: prompts drawn from several
         this.matchLevel = 'named';
         this.freshStart = false;
         this.loadSettings();
@@ -192,7 +193,8 @@ class DrillMode {
         try {
             const saved = JSON.parse(localStorage.getItem(DRILL_SETTINGS_KEY)) || {};
             const types = (saved.types || []).filter(t => Theory.QUALITIES[t]);
-            if (types.length) this.types = new Set(types);
+            this.mix = !!saved.mix;
+            if (types.length) this.types = new Set(this.mix ? types : types.slice(0, 1));
             if (Theory.MATCH_LEVELS.includes(saved.matchLevel)) this.matchLevel = saved.matchLevel;
         } catch (e) {
             // defaults
@@ -203,6 +205,7 @@ class DrillMode {
         try {
             localStorage.setItem(DRILL_SETTINGS_KEY, JSON.stringify({
                 types: [...this.types],
+                mix: this.mix,
                 matchLevel: this.matchLevel
             }));
         } catch (e) {
@@ -222,6 +225,12 @@ class DrillMode {
         this.heatmapEl = $('drill-heatmap');
         this.progressPanel = $('drill-progress');
         this.tooltipEl = $('drill-tooltip');
+        this.captionEl = $('drill-caption');
+        this.chips = new Map();
+
+        this.mixToggle = $('drill-mix');
+        this.mixToggle.checked = this.mix;
+        this.mixToggle.addEventListener('change', () => this.setMix(this.mixToggle.checked));
 
         for (const group of DRILL_GROUPS) {
             const groupEl = document.createElement('div');
@@ -236,14 +245,14 @@ class DrillMode {
                 const chip = document.createElement('button');
                 chip.className = 'btn toggle chip';
                 chip.dataset.type = type;
-                chip.setAttribute('aria-pressed', String(this.types.has(type)));
-                chip.classList.toggle('active', this.types.has(type));
                 this.app.setMusicText(chip, Theory.displayQuality(type));
-                chip.addEventListener('click', () => this.toggleType(type, chip));
+                chip.addEventListener('click', () => this.chooseType(type));
                 groupEl.appendChild(chip);
+                this.chips.set(type, chip);
             }
             this.typesEl.appendChild(groupEl);
         }
+        this.renderTypes();
 
         $('drill-skip').addEventListener('click', () => this.skip());
         $('drill-hint').addEventListener('click', () => this.showHint());
@@ -279,21 +288,61 @@ class DrillMode {
         });
     }
 
-    toggleType(type, chip) {
-        if (this.types.has(type)) this.types.delete(type);
-        else this.types.add(type);
+    /**
+     * Each chip is a whole chord type, not an extension to stack. Normally
+     * picking one replaces the last; with Mix on, prompts are drawn from all
+     * the selected types (one type per prompt – never combined).
+     */
+    chooseType(type) {
+        if (!this.mix) {
+            if (this.types.size === 1 && this.types.has(type)) return;
+            this.types = new Set([type]);
+        } else if (!this.types.has(type)) {
+            this.types.add(type);
+        } else if (this.types.size > 1) {
+            this.types.delete(type);
+        } else {
+            return; // keep at least one
+        }
+        this.typesChanged();
+    }
 
-        chip.classList.toggle('active', this.types.has(type));
-        chip.setAttribute('aria-pressed', String(this.types.has(type)));
+    setMix(mix) {
+        this.mix = mix;
+        if (!mix && this.types.size > 1) {
+            // Keep the type on screen, or failing that the first one
+            const keep = this.item && this.types.has(this.item.type) ? this.item.type : [...this.types][0];
+            this.types = new Set([keep]);
+        }
+        this.typesChanged();
+    }
+
+    typesChanged() {
         this.saveSettings();
-
+        this.renderTypes();
         if (!this.active) return;
 
         // Anything not yet played this session still gets its turn in the opening pass
-        const played = new Set(this.sessionEntries().map(e => `${e.q}:${e.r}`));
+        const played = new Set(this.sessionEntries().filter(e => DrillStats.counted(e)).map(e => `${e.q}:${e.r}`));
         this.firstPass = this.shuffle(this.items().filter(i => !played.has(i.id)));
         if (!this.item || !this.types.has(this.item.type)) this.next();
         this.renderStatus();
+    }
+
+    renderTypes() {
+        for (const [type, chip] of this.chips) {
+            const on = this.types.has(type);
+            chip.classList.toggle('active', on);
+            chip.setAttribute('aria-pressed', String(on));
+        }
+
+        const names = [...this.types].map(t => Theory.displayQuality(t));
+        const text = !this.mix
+            ? 'One chord type on every root. Turn on Mix to alternate between several.'
+            : names.length > 1
+                ? `Mixing ${names.join(', ')}: each prompt is one of these, never a combination.`
+                : 'Mix is on: pick more chord types and each prompt will be one of them.';
+        this.app.setMusicText(this.captionEl, text);
     }
 
     // ── Session ─────────────────────────────────────────────────────────────

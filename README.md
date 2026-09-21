@@ -38,7 +38,7 @@ What counts as "playing the chord" is set in Settings: **guide tones** (3rd & 7t
 
 ## Drill
 
-The **Drill** tab is for practising one kind of chord in every key. Pick one or more chord types; a symbol appears on a random root; play it in any voicing you like. It counts when the 3rd, the 7th and the extensions the symbol names are down (a Δ9 needs its 9, a 13 its 13, a 7alt any alteration, a ø7 its ♭5) with no red notes. The next chord appears immediately, and the bass answers with the root if it's on.
+The **Drill** tab is for practising one kind of chord in every key. Pick a chord type; a symbol appears on a random root; play it in any voicing you like. Each chip is a complete chord type, not an extension to stack: choosing another replaces it, unless **Mix** is on, in which case each prompt is one of the selected types (never a combination). It counts when the 3rd, the 7th and the extensions the symbol names are down (a Δ9 needs its 9, a 13 its 13, a 7alt any alteration, a ø7 its ♭5) with no red notes. The next chord appears immediately, and the bass answers with the root if it's on.
 
 - Every session opens with one shuffled pass through all 12 roots; after that, roots you're slow or sloppy on come up more often (never the same root twice running).
 - Correctness outweighs speed: an attempt with a wrong note, a hint or a skip counts as at least 2.5× a typical one, however fast. Among clean attempts, faster is better.

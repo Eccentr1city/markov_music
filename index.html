@@ -245,6 +245,26 @@
       margin-right: 0.3rem;
     }
 
+    .drill-type-options {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 0.4rem 1rem;
+      margin-top: -0.75rem;
+    }
+
+    .drill-caption {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      text-align: center;
+    }
+
+    .drill-caption .acc {
+      font-size: 0.95em;
+      vertical-align: 0;
+    }
+
     .btn.chip {
       font-family: 'Newsreader', 'Instrument Serif', serif;
       font-size: 0.95rem;
@@ -1166,6 +1186,12 @@
   <main>
     <section class="drill-panel drill-only" id="drill-panel" aria-label="Chord drill">
       <div class="drill-types" id="drill-types"></div>
+      <div class="drill-type-options">
+        <label class="check" title="Alternate between several chord types instead of drilling one">
+          <input type="checkbox" id="drill-mix"> Mix
+        </label>
+        <span class="drill-caption" id="drill-caption"></span>
+      </div>
 
       <div class="drill-prompt" id="drill-prompt">
         <div class="chord drill-chord" id="drill-chord">—</div>
