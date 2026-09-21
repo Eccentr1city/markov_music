@@ -58,7 +58,10 @@ class MarkovJazzApp {
         this.freshAttack = false;
         this.verdicts = new Map();      // held note → 'chord' | 'scale' | 'outside', as struck
 
+        this.mode = 'changes';          // 'changes' | 'drill'
+
         this.initUI();
+        this.drill = new DrillMode(this);
         this.loadSettings();
         this.render();
 
@@ -216,6 +219,12 @@ class MarkovJazzApp {
             this.saveSettings();
         });
 
+        // Tabs
+        this.tabButtons = document.querySelectorAll('.tab[data-mode]');
+        this.tabButtons.forEach(tab => {
+            tab.addEventListener('click', () => this.setMode(tab.dataset.mode));
+        });
+
         // Key picker
         this.keyButton = $('key-button');
         this.keyPicker = $('key-picker');
@@ -245,6 +254,12 @@ class MarkovJazzApp {
         // Keyboard shortcuts
         document.addEventListener('keydown', (e) => {
             if (e.target.matches('select, input[type="text"]')) return;
+
+            if (this.mode === 'drill') {
+                if (e.code === 'ArrowRight') this.drill.skip();
+                else if (e.code === 'KeyH') this.drill.showHint();
+                return;
+            }
 
             if (e.code === 'Escape') {
                 this.toggleKeyPicker(false);
@@ -806,6 +821,35 @@ class MarkovJazzApp {
         for (const [rowEl, marks] of perRow) Analysis.draw(rowEl, marks);
     }
 
+    // ── Modes ───────────────────────────────────────────────────────────────
+
+    setMode(mode) {
+        if (mode === this.mode) return;
+        this.pause();
+        this.toggleKeyPicker(false);
+        this.mode = mode;
+
+        document.body.classList.toggle('mode-drill', mode === 'drill');
+        this.tabButtons.forEach(tab => tab.classList.toggle('active', tab.dataset.mode === mode));
+
+        this.keyboard.clearLatched();
+        this.verdicts.clear();
+
+        if (mode === 'drill') {
+            // The tab click is the user gesture that lets audio and MIDI start
+            audioCore.ensure();
+            this.input.connect();
+            if (this.bass.enabled) this.bass.setStyle(this.bass.style);
+            this.drill.enter();
+        } else {
+            this.drill.leave();
+            this.render();
+        }
+
+        this.updateKeyboardVisibility();
+        this.updateKeyboard();
+    }
+
     // ── Listening ───────────────────────────────────────────────────────────
 
     setListenMode(mode) {
@@ -854,6 +898,11 @@ class MarkovJazzApp {
 
         this.updateKeyboard();
 
+        if (this.mode === 'drill') {
+            this.drill.handleInput(event, this.verdicts.get(event.midi));
+            return;
+        }
+
         if (this.listenMode === 'time') this.checkWindows();
         else if (this.listenMode === 'wait') this.checkWait();
     }
@@ -864,6 +913,7 @@ class MarkovJazzApp {
      * for an early push. The kindest reading wins.
      */
     judgeNote(midi) {
+        if (this.mode === 'drill') return this.drill.judge(midi);
         if (this.listenMode === 'off') return null;
 
         const candidates = [{
@@ -979,9 +1029,10 @@ class MarkovJazzApp {
     // ── On-screen keyboard ──────────────────────────────────────────────────
 
     updateKeyboardVisibility() {
-        const visible = this.listenMode !== 'off' || this.hintMode !== 'none';
+        const drilling = this.mode === 'drill';
+        const visible = drilling || this.listenMode !== 'off' || this.hintMode !== 'none';
         this.keyboardPanel.hidden = !visible;
-        this.midiStatus.hidden = this.listenMode === 'off';
+        this.midiStatus.hidden = !drilling && this.listenMode === 'off';
     }
 
     hintsFor(barIndex, chordIndex) {
@@ -1001,6 +1052,11 @@ class MarkovJazzApp {
 
     updateKeyboard() {
         if (this.keyboardPanel.hidden) return;
+
+        if (this.mode === 'drill') {
+            this.keyboard.update(this.input.notes, this.verdicts, this.drill.hints());
+            return;
+        }
 
         const hints = this.hintsFor(this.currentBarIndex, this.currentChordIndex);
         const verdicts = this.listenMode === 'off' ? new Map() : this.verdicts;

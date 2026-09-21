@@ -1,6 +1,6 @@
 # Markov Jazz Changes
 
-A practice tool that generates an endless jazz lead sheet using Markov chains, plays a rhythm section under it, and — if you plug in a MIDI keyboard — listens to whether you're making the changes.
+A practice tool that generates an endless jazz lead sheet using Markov chains, plays a rhythm section under it, and — if you plug in a MIDI keyboard — listens to whether you're making the changes. A second tab drills single chord types on random roots and tracks which roots slow you down.
 
 Chords flow through common jazz patterns (ii-V-I, tritone subs, modal interchange) while occasionally surprising you.
 
@@ -32,9 +32,21 @@ Playback starts with a one-bar count-in. Everything is scheduled on the Web Audi
 - **In time** — play each chord somewhere in its slot (up to an eighth early counts, so you can push). Chords turn green or red as they go by.
 - **Wait** — no tempo. The sheet advances when you play the current chord, and (if the bass is on) the bass answers with that chord's root.
 
-What counts as "playing the chord" is set in Settings: **guide tones** (3rd & 7th — the default, since the bass has the root), **shell** (root, 3rd, 7th) or the **full chord**. The keyboard colours each note as you strike it: **green** for a tone the chord symbol names, **amber** for a tension or a note from the chord's scale, **red** for a note with no plausible excuse. Green and amber notes are fine to add; a red note stops the chord from counting. Context matters: on a dominant resolving down a fifth to a minor chord, the ♭9 and ♭13 are amber even if the symbol just says "7". The sustain pedal is ignored — it's about what your fingers are on.
+What counts as "playing the chord" is set in Settings: **guide tones** (3rd & 7th — the default, since the bass has the root), **guide tones + extensions** (also the 9 of a Δ9, the 13 of a 13…), **shell** (root, 3rd, 7th) or the **full chord**. The keyboard colours each note as you strike it: **green** for a tone the chord symbol names, **amber** for a tension or a note from the chord's scale, **red** for a note with no plausible excuse. Green and amber notes are fine to add; a red note stops the chord from counting. Context matters: on a dominant resolving down a fifth to a minor chord, the ♭9 and ♭13 are amber even if the symbol just says "7". The sustain pedal is ignored — it's about what your fingers are on.
 
 **Keyboard hints** can show the guide tones or a rootless voicing for the current chord.
+
+## Drill
+
+The **Drill** tab is for practising one kind of chord in every key. Pick one or more chord types; a symbol appears on a random root; play it in any voicing you like. It counts when the 3rd, the 7th and the extensions the symbol names are down (a Δ9 needs its 9, a 13 its 13, a 7alt any alteration, a ø7 its ♭5) with no red notes. The next chord appears immediately, and the bass answers with the root if it's on.
+
+- Every session opens with one shuffled pass through all 12 roots; after that, roots you're slow or sloppy on come up more often (never the same root twice running).
+- Correctness outweighs speed: an attempt with a wrong note, a hint or a skip counts as at least 2.5× a typical one, however fast. Among clean attempts, faster is better.
+- The first chord of a session, and any chord where you obviously stepped away (15s+ and 5× your norm), don't count and are asked again.
+- History never crosses chord types: trouble with C‑7 says nothing about C13. Within a chord type, past sessions are a weak prior that fades (two-week half-life) and that a few attempts today override. **Ignore history this session** (Settings) turns it off.
+- **Progress** shows a chord type × root heatmap for the last 60 days: colour is difficulty relative to your own norm for that chord type, the number is your typical clean time.
+
+Every attempt is stored raw in your browser (chord, root, time, clean or not, the notes you played), so how history is used can change later without losing anything. **→** skips, **H** shows a hint.
 
 ## Choosing a key
 
@@ -64,6 +76,7 @@ Instead of random chord transitions, the engine tracks:
 - `audio.js`, `bass.js`, `rhythm.js` — audio context, sampled bass, synthesised drums and keys
 - `input.js` — Web MIDI and the on-screen keyboard
 - `analysis.js` — the ii–V / resolution overlay
+- `drill.js` — the Drill tab: prompt selection, scoring, attempt log, heatmap
 - `app.js` — transport, display and listening modes
 
 ## Credits

@@ -30,6 +30,8 @@ const AWKWARD = { 'B#': 'C', 'E#': 'F', 'Cb': 'B', 'Fb': 'E', 'A#': 'Bb' };
 // All intervals are semitones above the root.
 //   guide    – the tones that define the sound (3rd & 7th, or their stand-ins)
 //   tones    – everything the chord symbol actually names
+//   named    – the extensions in the symbol (the 9 of a maj9); namedAny – at
+//              least one of these (an alt chord needs some alteration)
 //   core     – the plain four-note chord
 //   allowed  – chord tones plus the tensions a comping pianist might add
 //   voicing  – rootless "type A" voicing, ascending from the 3rd
@@ -52,28 +54,28 @@ const DIMINISHED = [0, 2, 3, 5, 6, 8, 9, 11];
 
 const QUALITIES = {
     'maj7':    { family: 'maj', tones: [0, 4, 7, 11], guide: [4, 11], core: [0, 4, 7, 11], allowed: MAJ_ALLOWED, voicing: [4, 7, 11, 14], scale: IONIAN },
-    'maj9':    { family: 'maj', tones: [0, 2, 4, 7, 11], guide: [4, 11], core: [0, 4, 7, 11], allowed: MAJ_ALLOWED, voicing: [4, 7, 11, 14], scale: IONIAN },
+    'maj9':    { family: 'maj', named: [2], tones: [0, 2, 4, 7, 11], guide: [4, 11], core: [0, 4, 7, 11], allowed: MAJ_ALLOWED, voicing: [4, 7, 11, 14], scale: IONIAN },
     '6':       { family: 'maj', tones: [0, 4, 7, 9], guide: [4, 9],  core: [0, 4, 7, 9],  allowed: MAJ_ALLOWED, voicing: [4, 7, 9, 14],  scale: IONIAN },
-    '69':      { family: 'maj', tones: [0, 2, 4, 7, 9], guide: [4, 9],  core: [0, 4, 7, 9],  allowed: MAJ_ALLOWED, voicing: [4, 7, 9, 14],  scale: IONIAN },
-    'maj7#11': { family: 'maj', tones: [0, 4, 6, 7, 11], guide: [4, 11], core: [0, 4, 7, 11], allowed: MAJ_ALLOWED, voicing: [4, 6, 11, 14], scale: LYDIAN },
+    '69':      { family: 'maj', named: [2], tones: [0, 2, 4, 7, 9], guide: [4, 9],  core: [0, 4, 7, 9],  allowed: MAJ_ALLOWED, voicing: [4, 7, 9, 14],  scale: IONIAN },
+    'maj7#11': { family: 'maj', named: [6], tones: [0, 4, 6, 7, 11], guide: [4, 11], core: [0, 4, 7, 11], allowed: MAJ_ALLOWED, voicing: [4, 6, 11, 14], scale: LYDIAN },
 
     '7':       { family: 'dom', tones: [0, 4, 7, 10], guide: [4, 10], core: [0, 4, 7, 10], allowed: DOM_ALLOWED, voicing: [4, 7, 10, 14], scale: MIXOLYDIAN },
-    '9':       { family: 'dom', tones: [0, 2, 4, 7, 10], guide: [4, 10], core: [0, 4, 7, 10], allowed: DOM_ALLOWED, voicing: [4, 7, 10, 14], scale: MIXOLYDIAN },
-    '13':      { family: 'dom', tones: [0, 2, 4, 7, 9, 10], guide: [4, 10], core: [0, 4, 7, 10], allowed: DOM_ALLOWED, voicing: [4, 9, 10, 14], scale: MIXOLYDIAN },
-    '7#11':    { family: 'dom', tones: [0, 4, 6, 7, 10], guide: [4, 10], core: [0, 4, 7, 10], allowed: DOM_ALLOWED, voicing: [4, 6, 10, 14], scale: LYDIAN_DOM },
+    '9':       { family: 'dom', named: [2], tones: [0, 2, 4, 7, 10], guide: [4, 10], core: [0, 4, 7, 10], allowed: DOM_ALLOWED, voicing: [4, 7, 10, 14], scale: MIXOLYDIAN },
+    '13':      { family: 'dom', named: [9], tones: [0, 2, 4, 7, 9, 10], guide: [4, 10], core: [0, 4, 7, 10], allowed: DOM_ALLOWED, voicing: [4, 9, 10, 14], scale: MIXOLYDIAN },
+    '7#11':    { family: 'dom', named: [6], tones: [0, 4, 6, 7, 10], guide: [4, 10], core: [0, 4, 7, 10], allowed: DOM_ALLOWED, voicing: [4, 6, 10, 14], scale: LYDIAN_DOM },
     'sus4':    { family: 'dom', tones: [0, 5, 7, 10], guide: [5, 10], core: [0, 5, 7, 10], allowed: [0, 2, 5, 7, 9, 10], voicing: [5, 9, 10, 14], scale: MIXOLYDIAN },
-    '7b9':     { family: 'dom', tones: [0, 1, 4, 7, 10], guide: [4, 10], core: [0, 4, 7, 10], allowed: [0, 1, 3, 4, 6, 7, 8, 9, 10], voicing: [4, 9, 10, 13], scale: PHRYGIAN_DOM },
-    '7#9':     { family: 'dom', tones: [0, 3, 4, 7, 10], guide: [4, 10], core: [0, 4, 7, 10], allowed: [0, 1, 3, 4, 6, 7, 8, 10], voicing: [4, 8, 10, 15], scale: ALTERED },
-    '7alt':    { family: 'dom', tones: [0, 1, 3, 4, 6, 8, 10], guide: [4, 10], core: [0, 4, 10],    allowed: ALT_ALLOWED, voicing: [4, 8, 10, 15], scale: ALTERED },
+    '7b9':     { family: 'dom', named: [1], tones: [0, 1, 4, 7, 10], guide: [4, 10], core: [0, 4, 7, 10], allowed: [0, 1, 3, 4, 6, 7, 8, 9, 10], voicing: [4, 9, 10, 13], scale: PHRYGIAN_DOM },
+    '7#9':     { family: 'dom', named: [3], tones: [0, 3, 4, 7, 10], guide: [4, 10], core: [0, 4, 7, 10], allowed: [0, 1, 3, 4, 6, 7, 8, 10], voicing: [4, 8, 10, 15], scale: ALTERED },
+    '7alt':    { family: 'dom', namedAny: [1, 3, 6, 8], tones: [0, 1, 3, 4, 6, 8, 10], guide: [4, 10], core: [0, 4, 10],    allowed: ALT_ALLOWED, voicing: [4, 8, 10, 15], scale: ALTERED },
 
     'm7':      { family: 'min', tones: [0, 3, 7, 10], guide: [3, 10], core: [0, 3, 7, 10], allowed: MIN_ALLOWED, voicing: [3, 7, 10, 14], scale: DORIAN },
-    'm9':      { family: 'min', tones: [0, 2, 3, 7, 10], guide: [3, 10], core: [0, 3, 7, 10], allowed: MIN_ALLOWED, voicing: [3, 7, 10, 14], scale: DORIAN },
-    'm11':     { family: 'min', tones: [0, 2, 3, 5, 7, 10], guide: [3, 10], core: [0, 3, 7, 10], allowed: MIN_ALLOWED, voicing: [3, 5, 10, 14], scale: DORIAN },
+    'm9':      { family: 'min', named: [2], tones: [0, 2, 3, 7, 10], guide: [3, 10], core: [0, 3, 7, 10], allowed: MIN_ALLOWED, voicing: [3, 7, 10, 14], scale: DORIAN },
+    'm11':     { family: 'min', named: [5], tones: [0, 2, 3, 5, 7, 10], guide: [3, 10], core: [0, 3, 7, 10], allowed: MIN_ALLOWED, voicing: [3, 5, 10, 14], scale: DORIAN },
     'm6':      { family: 'min', tones: [0, 3, 7, 9], guide: [3, 9],  core: [0, 3, 7, 9],  allowed: [0, 2, 3, 5, 7, 9, 11], voicing: [3, 7, 9, 14], scale: DORIAN },
-    'm69':     { family: 'min', tones: [0, 2, 3, 7, 9], guide: [3, 9],  core: [0, 3, 7, 9],  allowed: [0, 2, 3, 5, 7, 9, 11], voicing: [3, 7, 9, 14], scale: DORIAN },
+    'm69':     { family: 'min', named: [2], tones: [0, 2, 3, 7, 9], guide: [3, 9],  core: [0, 3, 7, 9],  allowed: [0, 2, 3, 5, 7, 9, 11], voicing: [3, 7, 9, 14], scale: DORIAN },
 
-    'm7b5':    { family: 'hdim', tones: [0, 3, 6, 10], guide: [3, 10], core: [0, 3, 6, 10], allowed: [0, 2, 3, 5, 6, 8, 10], voicing: [3, 6, 10, 12], scale: LOCRIAN },
-    'dim7':    { family: 'dim', tones: [0, 3, 6, 9], guide: [3, 9],  core: [0, 3, 6, 9],  allowed: DIMINISHED, voicing: [3, 6, 9, 12], scale: DIMINISHED }
+    'm7b5':    { family: 'hdim', named: [6], tones: [0, 3, 6, 10], guide: [3, 10], core: [0, 3, 6, 10], allowed: [0, 2, 3, 5, 6, 8, 10], voicing: [3, 6, 10, 12], scale: LOCRIAN },
+    'dim7':    { family: 'dim', named: [6], tones: [0, 3, 6, 9], guide: [3, 9],  core: [0, 3, 6, 9],  allowed: DIMINISHED, voicing: [3, 6, 9, 12], scale: DIMINISHED }
 };
 
 const QUALITY_DISPLAY = {
@@ -84,7 +86,7 @@ const QUALITY_DISPLAY = {
     'm7b5': 'ø7', 'dim7': '°7'
 };
 
-const MATCH_LEVELS = ['guide', 'shell', 'full'];
+const MATCH_LEVELS = ['guide', 'named', 'shell', 'full'];
 
 const Theory = {
     QUALITIES,
@@ -145,13 +147,42 @@ const Theory = {
         return this.quality(id).family;
     },
 
-    /** Pitch classes you must be holding for the chord to count. */
+    /**
+     * Pitch classes you must be holding for the chord to count.
+     *   guide – 3rd & 7th          named – those plus the symbol's extensions
+     *   shell – root, 3rd & 7th    full  – the whole chord, extensions included
+     */
     requiredPcs(chord, level = 'guide') {
         const q = this.quality(chord.quality);
-        const intervals = level === 'full' ? q.core
+        const named = q.named || [];
+        const intervals = level === 'full' ? [...q.core, ...named]
             : level === 'shell' ? [0, ...q.guide]
+            : level === 'named' ? [...q.guide, ...named]
             : q.guide;
         return intervals.map(i => (chord.rootPc + i) % 12);
+    },
+
+    /** Some symbols need "one of these" rather than a fixed note (7alt). */
+    requiredAnyPcs(chord, level = 'guide') {
+        const any = this.quality(chord.quality).namedAny;
+        if (!any || (level !== 'named' && level !== 'full')) return [];
+        return any.map(i => (chord.rootPc + i) % 12);
+    },
+
+    /** What a level asks for, in words: "3rd · ♭7th · 13th". */
+    describeRequirement(chord, level = 'guide') {
+        const NAMES = { 0: 'root', 1: '♭9', 2: '9th', 3: '♭3rd', 4: '3rd', 5: '11th', 6: '♯11', 7: '5th', 8: '♭13', 9: '13th', 10: '♭7th', 11: '7th' };
+        const q = this.quality(chord.quality);
+        const name = (i) => {
+            if (i === 3 && q.family === 'dom') return '♯9';
+            if (i === 5 && q.guide.includes(5)) return '4th';
+            if (i === 6 && q.core.includes(6)) return '♭5th';
+            if (i === 9 && q.guide.includes(9)) return q.family === 'dim' ? '°7th' : '6th';
+            return NAMES[i];
+        };
+        const parts = this.requiredPcs(chord, level).map(pc => name((pc - chord.rootPc + 12) % 12));
+        if (this.requiredAnyPcs(chord, level).length) parts.push('any alteration');
+        return parts.join(' · ');
     },
 
     /**
@@ -202,6 +233,9 @@ const Theory = {
 
         const allowed = new Set(this.allowedPcs(chord, next));
         for (const pc of held) if (!allowed.has(pc)) return false;
+
+        const any = this.requiredAnyPcs(chord, level);
+        if (any.length && !any.some(pc => held.has(pc))) return false;
 
         return this.requiredPcs(chord, level).every(pc => held.has(pc));
     },

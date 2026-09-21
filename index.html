@@ -173,8 +173,281 @@
       border: 1px solid var(--border);
     }
 
-    [hidden] {
+    [hidden],
+    body.mode-drill .changes-only,
+    body:not(.mode-drill) .drill-only {
       display: none !important;
+    }
+
+    /* ── Tabs ── */
+    .header-title {
+      display: flex;
+      align-items: baseline;
+      gap: 1.5rem;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 0.25rem;
+    }
+
+    .tab {
+      background: none;
+      border: none;
+      border-bottom: 2px solid transparent;
+      color: var(--text-secondary);
+      font-family: inherit;
+      font-size: 0.8rem;
+      padding: 0.3rem 0.5rem;
+      cursor: pointer;
+      transition: color 0.2s ease, border-color 0.2s ease;
+    }
+
+    .tab:hover {
+      color: var(--text-primary);
+    }
+
+    .tab.active {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+    }
+
+    /* ── Drill ── */
+    .drill-panel {
+      max-width: 1000px;
+      margin: 0 auto;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1.5rem;
+    }
+
+    .drill-types {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 0.6rem 1.5rem;
+    }
+
+    .drill-type-group {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 0.3rem;
+    }
+
+    .drill-type-label {
+      font-size: 0.65rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-right: 0.3rem;
+    }
+
+    .btn.chip {
+      font-family: 'Newsreader', 'Instrument Serif', serif;
+      font-size: 0.95rem;
+      font-variant-numeric: lining-nums;
+      padding: 0.3rem 0.65rem;
+      min-width: 2.6rem;
+    }
+
+    .btn.chip .acc {
+      font-size: 0.85em;
+      vertical-align: 0.05em;
+    }
+
+    .drill-prompt {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 1.5rem 4rem;
+      min-width: min(100%, 22rem);
+      background: var(--chord-current);
+      border: 1px solid var(--accent);
+      border-radius: 12px;
+      box-shadow: 0 0 30px var(--current-glow), inset 0 0 30px var(--current-glow);
+    }
+
+    .drill-prompt.landed {
+      animation: landed 0.45s ease-out;
+    }
+
+    @keyframes landed {
+      from { border-color: var(--hit); box-shadow: 0 0 40px rgba(143, 207, 159, 0.35), inset 0 0 30px rgba(143, 207, 159, 0.2); }
+      to   { border-color: var(--accent); }
+    }
+
+    .chord.drill-chord {
+      font-size: 5rem;
+      line-height: 1.1;
+    }
+
+    .drill-needs,
+    .drill-status {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      min-height: 1.1em;
+      text-align: center;
+    }
+
+    .drill-needs .acc {
+      font-size: 0.95em;
+      vertical-align: 0;
+    }
+
+    .drill-status {
+      color: var(--text-muted);
+    }
+
+    /* ── Drill progress heatmap ── */
+    .drill-progress {
+      max-width: 1000px;
+      margin: 0 auto;
+      width: 100%;
+      padding: 1.25rem;
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+    }
+
+    .drill-progress-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      flex-wrap: wrap;
+      gap: 0.5rem 1rem;
+    }
+
+    .drill-progress h2 {
+      font-family: 'Instrument Serif', serif;
+      font-weight: 400;
+      font-size: 1.2rem;
+    }
+
+    .drill-progress-note,
+    .drill-empty {
+      font-size: 0.7rem;
+      line-height: 1.5;
+      color: var(--text-muted);
+      margin: 0.4rem 0 1rem;
+      max-width: 70ch;
+    }
+
+    .heatmap-legend {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.65rem;
+      color: var(--text-secondary);
+    }
+
+    /* One hue; on a dark surface "more" is lighter, and "near zero" recedes */
+    .heatmap-ramp {
+      width: 6rem;
+      height: 0.6rem;
+      border-radius: 3px;
+      background: linear-gradient(to right,
+        color-mix(in oklab, var(--heat-low), var(--heat-high) 0%),
+        color-mix(in oklab, var(--heat-low), var(--heat-high) 100%));
+    }
+
+    .heatmap {
+      --heat-low: #23232b;
+      --heat-high: #e8c468;
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 2px;
+      table-layout: fixed;
+      font-size: 0.75rem;
+    }
+
+    .heatmap-legend {
+      --heat-low: #23232b;
+      --heat-high: #e8c468;
+    }
+
+    .heatmap th {
+      font-weight: 400;
+      color: var(--text-secondary);
+      padding: 0.3rem 0.2rem;
+    }
+
+    .heatmap th[scope="row"] {
+      font-family: 'Newsreader', 'Instrument Serif', serif;
+      font-size: 0.95rem;
+      text-align: right;
+      padding-right: 0.6rem;
+      width: 4.5rem;
+      white-space: nowrap;
+    }
+
+    .heatmap th .acc {
+      font-size: 0.9em;
+      vertical-align: 0;
+    }
+
+    .heatmap td {
+      text-align: center;
+      padding: 0.55rem 0.1rem;
+      border-radius: 4px;
+      color: var(--text-primary);
+      background: color-mix(in oklab, var(--heat-low), var(--heat-high) calc(var(--level, 0) * 100%));
+      font-variant-numeric: tabular-nums;
+      cursor: default;
+      outline: none;
+    }
+
+    /* Ink flips to dark once the cell is bright enough to need it */
+    .heatmap td.bright {
+      color: var(--bg-deep);
+    }
+
+    .heatmap td:hover,
+    .heatmap td:focus-visible {
+      box-shadow: 0 0 0 2px var(--text-primary);
+    }
+
+    .heatmap td.empty {
+      background: none;
+      box-shadow: inset 0 0 0 1px var(--border);
+    }
+
+    .drill-clear {
+      margin-top: 1rem;
+      font-size: 0.7rem;
+      padding: 0.4rem 0.7rem;
+      color: var(--text-secondary);
+    }
+
+    .drill-tooltip {
+      position: fixed;
+      z-index: 20;
+      display: flex;
+      flex-direction: column;
+      gap: 0.15rem;
+      padding: 0.5rem 0.7rem;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 0.7rem;
+      color: var(--text-secondary);
+      pointer-events: none;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+    }
+
+    .drill-tooltip strong {
+      font-family: 'Newsreader', 'Instrument Serif', serif;
+      font-weight: 400;
+      font-size: 1rem;
+      color: var(--text-primary);
+    }
+
+    .drill-tooltip .acc {
+      font-size: 0.9em;
+      vertical-align: 0;
     }
 
     main {
@@ -799,6 +1072,42 @@
       .midi-status {
         display: none;
       }
+
+      .header-title {
+        gap: 0.75rem;
+      }
+
+      .tab {
+        font-size: 0.7rem;
+        padding: 0.25rem 0.35rem;
+      }
+
+      .chord.drill-chord {
+        font-size: 3.5rem;
+      }
+
+      .drill-prompt {
+        padding: 1rem 2rem;
+      }
+
+      .drill-panel {
+        gap: 1rem;
+      }
+
+      .heatmap {
+        font-size: 0.6rem;
+        border-spacing: 1px;
+      }
+
+      .heatmap th[scope="row"] {
+        width: 3.2rem;
+        font-size: 0.75rem;
+        padding-right: 0.3rem;
+      }
+
+      .heatmap td {
+        padding: 0.45rem 0;
+      }
     }
 
     /* ── Tablets ── */
@@ -820,11 +1129,17 @@
 </head>
 <body>
   <header>
-    <h1>Markov Jazz Changes</h1>
+    <div class="header-title">
+      <h1>Markov Jazz Changes</h1>
+      <nav class="tabs" aria-label="Mode">
+        <button class="tab active" data-mode="changes">Changes</button>
+        <button class="tab" data-mode="drill">Drill</button>
+      </nav>
+    </div>
     <div class="header-status">
       <div class="midi-status" id="midi-status" hidden>MIDI off</div>
-      <div class="score" id="score" title="Chords played correctly" hidden>0/0</div>
-      <div class="key-picker-anchor">
+      <div class="score changes-only" id="score" title="Chords played correctly" hidden>0/0</div>
+      <div class="key-picker-anchor changes-only">
         <button class="key-display" id="key-button" title="Choose a key" aria-haspopup="dialog" aria-expanded="false">
           Key: <span id="current-key">C major</span><span class="key-lock" id="key-lock" hidden> · locked</span>
         </button>
@@ -849,7 +1164,18 @@
   </header>
 
   <main>
-    <div class="lead-sheet" id="lead-sheet">
+    <section class="drill-panel drill-only" id="drill-panel" aria-label="Chord drill">
+      <div class="drill-types" id="drill-types"></div>
+
+      <div class="drill-prompt" id="drill-prompt">
+        <div class="chord drill-chord" id="drill-chord">—</div>
+        <div class="drill-needs" id="drill-needs"></div>
+      </div>
+
+      <div class="drill-status" id="drill-status"></div>
+    </section>
+
+    <div class="lead-sheet changes-only" id="lead-sheet">
       <div class="rows-container" id="rows-container">
         <!-- Rows will be generated here -->
       </div>
@@ -858,36 +1184,67 @@
     <div class="keyboard-panel" id="keyboard-panel" hidden>
       <div class="keyboard" id="keyboard"></div>
     </div>
+
+    <section class="drill-progress drill-only" id="drill-progress" aria-label="Drill progress" hidden>
+      <div class="drill-progress-head">
+        <h2>Where you're slow</h2>
+        <div class="heatmap-legend" aria-hidden="true">
+          <span>easier</span><span class="heatmap-ramp"></span><span>harder</span>
+        </div>
+      </div>
+      <p class="drill-progress-note">Last 60 days. Colour compares each root with your own typical time for that chord type (wrong notes count heavily); the number is your typical clean time in seconds.</p>
+      <div id="drill-heatmap"></div>
+      <button class="btn drill-clear" id="drill-clear">Clear drill history</button>
+    </section>
   </main>
+
+  <div class="drill-tooltip" id="drill-tooltip" role="tooltip" hidden></div>
 
   <footer>
     <div class="controls">
-      <div class="transport">
+      <div class="transport changes-only">
         <button class="btn primary" id="play-btn">Play</button>
         <button class="btn" id="reset-btn">Reset</button>
       </div>
       
-      <div class="beat-indicator">
+      <div class="beat-indicator changes-only">
         <div class="beat" data-beat="1"></div>
         <div class="beat" data-beat="2"></div>
         <div class="beat" data-beat="3"></div>
         <div class="beat" data-beat="4"></div>
       </div>
 
-      <div class="band">
-        <button class="btn toggle" id="metronome-btn">Click</button>
-        <button class="btn toggle" id="drums-btn">Drums</button>
-        <button class="btn toggle" id="bass-btn">Bass</button>
-        <button class="btn toggle" id="comp-btn">Keys</button>
+      <div class="transport drill-only">
+        <button class="btn" id="drill-skip" title="Skip this chord (counts as a miss)">Skip</button>
+        <button class="btn" id="drill-hint" title="Show a voicing on the keyboard (counts as a miss)">Show hint</button>
       </div>
 
-      <div class="control-group">
+      <div class="band">
+        <button class="btn toggle changes-only" id="metronome-btn">Click</button>
+        <button class="btn toggle changes-only" id="drums-btn">Drums</button>
+        <button class="btn toggle" id="bass-btn" title="In Drill, the bass answers each chord you land">Bass</button>
+        <button class="btn toggle changes-only" id="comp-btn">Keys</button>
+      </div>
+
+      <div class="control-group drill-only">
+        <label for="drill-match">Counts when you play</label>
+        <select id="drill-match">
+          <option value="named">3rd, 7th + extensions</option>
+          <option value="guide">3rd &amp; 7th only</option>
+          <option value="shell">Shell (root, 3rd, 7th)</option>
+          <option value="full">Full chord</option>
+        </select>
+      </div>
+
+      <button class="btn toggle drill-only" id="drill-progress-btn">Progress</button>
+
+      <div class="control-group changes-only">
         <label>Tempo</label>
         <input type="range" id="tempo" min="40" max="240" value="60">
         <span class="tempo-value"><span id="tempo-value">60</span> bpm</span>
       </div>
 
-      <div class="control-group">
+      <div class="control-group changes-only">
         <label>Listen</label>
         <div class="segmented">
           <button class="btn toggle active" data-listen="off">Off</button>
@@ -900,31 +1257,32 @@
     </div>
 
     <div class="settings-panel" id="settings-panel">
-      <div class="control-group">
+      <div class="control-group changes-only">
         <label>Key Stability</label>
         <input type="range" id="key-stability" min="0" max="100" value="40">
       </div>
-      <div class="control-group">
+      <div class="control-group changes-only">
         <label>Adventurousness</label>
         <input type="range" id="adventurousness" min="0" max="100" value="15">
       </div>
-      <div class="control-group">
+      <div class="control-group changes-only">
         <label>Extension Complexity</label>
         <input type="range" id="complexity" min="0" max="100" value="20">
       </div>
-      <div class="control-group">
+      <div class="control-group changes-only">
         <label>Two-Chord Bars</label>
         <input type="range" id="two-chord" min="0" max="50" value="8">
       </div>
-      <div class="control-group">
+      <div class="control-group changes-only">
         <label for="match-level">Chord counts when you play</label>
         <select id="match-level">
           <option value="guide">Guide tones (3rd &amp; 7th)</option>
+          <option value="named">Guide tones + extensions</option>
           <option value="shell">Shell (root, 3rd, 7th)</option>
           <option value="full">Full chord</option>
         </select>
       </div>
-      <div class="control-group">
+      <div class="control-group changes-only">
         <label for="hint-mode">Keyboard hints</label>
         <select id="hint-mode">
           <option value="none">None</option>
@@ -932,9 +1290,14 @@
           <option value="voicing">Rootless voicing</option>
         </select>
       </div>
-      <label class="check"><input type="checkbox" id="analysis-toggle" checked> Analysis marks</label>
+      <label class="check changes-only"><input type="checkbox" id="analysis-toggle" checked> Analysis marks</label>
+      <label class="check drill-only" title="Choose roots from this session only, ignoring past sessions"><input type="checkbox" id="drill-fresh"> Ignore history this session</label>
       <label class="check"><input type="checkbox" id="monitor-toggle" checked> Hear my notes</label>
-      <div class="shortcuts">
+      <div class="shortcuts drill-only">
+        <span>→</span> skip
+        <span>H</span> hint
+      </div>
+      <div class="shortcuts changes-only">
         <span>Space</span> play/pause
         <span>→</span> next bar
         <span>R</span> reset
@@ -949,6 +1312,7 @@
   <script src="rhythm.js"></script>
   <script src="input.js"></script>
   <script src="analysis.js"></script>
+  <script src="drill.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
