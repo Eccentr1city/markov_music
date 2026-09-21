@@ -336,12 +336,7 @@ class DrillMode {
             chip.setAttribute('aria-pressed', String(on));
         }
 
-        const names = [...this.types].map(t => Theory.displayQuality(t));
-        const text = !this.mix
-            ? 'One chord type on every root. Turn on Mix to alternate between several.'
-            : names.length > 1
-                ? `Mixing ${names.join(', ')}: each prompt is one of these, never a combination.`
-                : 'Mix is on: pick more chord types and each prompt will be one of them.';
+        const text = this.mix ? '' : 'Enable mix to alternate between multiple varieties';
         this.app.setMusicText(this.captionEl, text);
     }
 
