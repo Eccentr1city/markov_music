@@ -36,10 +36,14 @@ What counts as "playing the chord" is set in Settings: **guide tones** (3rd & 7t
 
 **Keyboard hints** can show the guide tones or a rootless voicing for the current chord.
 
+## Choosing a key
+
+Click the key in the header to pick one. **Switch and reset** starts a new progression from bar 1 on that key's tonic. With **Stay in this key** ticked (the default) it never modulates, and Reset gives you another chorus in the same key; pick **Random** to go back to wandering.
+
 ## Settings
 
 - **Tempo** — 40-240 BPM
-- **Key Stability** — How long before modulating
+- **Key Stability** — How long a key lasts, on an exponential scale: about 3 bars per key at 0, 8 at the default of 40, 18 at 75, and no modulation at all at 100
 - **Adventurousness** — Probability of unexpected chord choices
 - **Extension Complexity** — Simple 7ths vs. rich alterations
 - **Two-Chord Bars** — Probability of 2 chords per bar

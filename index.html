@@ -75,6 +75,70 @@
       font-weight: 600;
     }
 
+    button.key-display {
+      font-family: inherit;
+      cursor: pointer;
+      transition: border-color 0.2s ease;
+    }
+
+    button.key-display:hover,
+    button.key-display[aria-expanded="true"] {
+      border-color: var(--accent-dim);
+    }
+
+    .key-display .key-lock {
+      color: var(--text-secondary);
+      font-weight: 400;
+    }
+
+    .key-picker-anchor {
+      position: relative;
+    }
+
+    .key-picker {
+      position: absolute;
+      top: calc(100% + 0.5rem);
+      right: 0;
+      z-index: 10;
+      width: 18rem;
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
+    }
+
+    .key-picker-row {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .key-picker-row select {
+      flex: 1;
+      font-size: 0.85rem;
+      padding: 0.5rem 0.6rem;
+    }
+
+    .key-picker-row .btn {
+      flex: 1;
+      min-width: auto;
+      padding: 0.6rem 0.5rem;
+      white-space: nowrap;
+    }
+
+    .key-picker-row .btn.primary {
+      flex: 2.2;
+    }
+
+    .key-picker-note {
+      font-size: 0.7rem;
+      line-height: 1.4;
+      color: var(--text-muted);
+    }
+
     .header-status {
       display: flex;
       align-items: center;
@@ -760,7 +824,27 @@
     <div class="header-status">
       <div class="midi-status" id="midi-status" hidden>MIDI off</div>
       <div class="score" id="score" title="Chords played correctly" hidden>0/0</div>
-      <div class="key-display">Key: <span id="current-key">C major</span></div>
+      <div class="key-picker-anchor">
+        <button class="key-display" id="key-button" title="Choose a key" aria-haspopup="dialog" aria-expanded="false">
+          Key: <span id="current-key">C major</span><span class="key-lock" id="key-lock" hidden> · locked</span>
+        </button>
+
+        <div class="key-picker" id="key-picker" role="dialog" aria-label="Choose a key" hidden>
+          <div class="key-picker-row">
+            <select id="key-root" aria-label="Key note"></select>
+            <select id="key-mode" aria-label="Major or minor">
+              <option value="major">major</option>
+              <option value="minor">minor</option>
+            </select>
+          </div>
+          <label class="check"><input type="checkbox" id="key-stay" checked> Stay in this key</label>
+          <p class="key-picker-note">Switching key starts a new progression from bar 1.</p>
+          <div class="key-picker-row">
+            <button class="btn primary" id="key-apply">Switch and reset</button>
+            <button class="btn" id="key-cancel">Cancel</button>
+          </div>
+        </div>
+      </div>
     </div>
   </header>
 
@@ -818,7 +902,7 @@
     <div class="settings-panel" id="settings-panel">
       <div class="control-group">
         <label>Key Stability</label>
-        <input type="range" id="key-stability" min="0" max="100" value="85">
+        <input type="range" id="key-stability" min="0" max="100" value="40">
       </div>
       <div class="control-group">
         <label>Adventurousness</label>

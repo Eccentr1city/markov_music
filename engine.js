@@ -194,8 +194,12 @@ const MODULATION_ENTRIES = {
     'direct': 0.10
 };
 
-// Don't change key again until the last one has had a chance to settle
-const MIN_CHORDS_BETWEEN_MODULATIONS = 6;
+// Key Stability sets how long a key lasts, on an exponential scale so the whole
+// slider is useful: 0 → ~3 chords per key, 0.5 → ~10, 0.9 → ~27, 1 → never leaves.
+const KEY_LENGTH_MIN = 3;        // a ii-V-I in the new key, then straight out again
+const KEY_LENGTH_DOUBLINGS = 3.5;
+const TONIC_EXIT_BIAS = 1.4;
+const OFF_TONIC_EXIT_BIAS = 0.85;
 
 // ─── Key modulation targets ─────────────────────────────────────────────────
 
@@ -229,7 +233,7 @@ const QUALITY_OPTIONS = {
 class MarkovJazzEngine {
     constructor(settings = {}) {
         this.settings = {
-            keyStability: settings.keyStability ?? 0.85,
+            keyStability: settings.keyStability ?? 0.40,
             adventurousness: settings.adventurousness ?? 0.15,
             complexity: settings.complexity ?? 0.20,
             twoChordProbability: settings.twoChordProbability ?? 0.08
@@ -238,14 +242,20 @@ class MarkovJazzEngine {
         this.reset();
     }
 
-    reset(startingKey = null) {
+    /**
+     * @param {object}  startingKey  { root, mode }, or null for a random key
+     * @param {boolean} lockKey      stay in that key: no modulations
+     */
+    reset(startingKey = null, lockKey = false) {
         this.currentKey = startingKey || this.randomKey();
+        this.keyLocked = !!startingKey && lockKey;
         this.currentDegree = 'I';
         this.previousDegree = null;
         this.barCount = 0;
         this.history = [];
         this.recentDegrees = [];
-        this.approachQueue = [];
+        // A key you asked for opens on its tonic, to orient the ear
+        this.approachQueue = startingKey ? ['I'] : [];
         this.chordsSinceModulation = 0;
     }
 
@@ -322,18 +332,33 @@ class MarkovJazzEngine {
 
     // ── Key modulation ──────────────────────────────────────────────────────
 
+    /** Average number of chords a key should last at the current stability. */
+    targetKeyLength() {
+        const stability = this.settings.keyStability;
+        if (stability >= 0.995) return Infinity;
+        return KEY_LENGTH_MIN * Math.pow(2, KEY_LENGTH_DOUBLINGS * stability);
+    }
+
     maybeModulate() {
-        // Never interrupt a queued cadence, and let each key settle first
+        if (this.keyLocked) return;
+
+        // Never interrupt a queued cadence
         if (this.approachQueue.length > 0) return;
-        if (this.chordsSinceModulation < MIN_CHORDS_BETWEEN_MODULATIONS) return;
 
-        const modulationChance = 1 - this.settings.keyStability;
+        const target = this.targetKeyLength();
+        if (!isFinite(target)) return;
 
-        // More likely to modulate after a cadence (landing on I)
-        const postCadence = this.currentDegree === 'I';
-        const effectiveChance = postCadence ? modulationChance * 2 : modulationChance;
+        // A key settles for about half its expected life, then each chord has a
+        // chance of leaving that makes the other half average out.
+        const settle = Math.max(KEY_LENGTH_MIN, Math.round(target / 2));
+        if (this.chordsSinceModulation < settle) return;
 
-        if (Math.random() < effectiveChance) {
+        // Leaving is likelier from the tonic: modulating after a cadence sounds
+        // deliberate, mid-phrase sounds like a wrong turn.
+        const onTonic = this.currentDegree === 'I';
+        const chance = Math.min(1, (2 / target) * (onTonic ? TONIC_EXIT_BIAS : OFF_TONIC_EXIT_BIAS));
+
+        if (Math.random() < chance) {
             this.modulate();
         }
     }
@@ -446,7 +471,12 @@ class MarkovJazzEngine {
         const targets = Object.entries(APPROACH_SEQUENCES);
         const weights = {};
 
+        // The other targets are major-key degrees; in minor they'd drag in
+        // chords like a major-key vi. iiø-V-i is the one that belongs.
+        const minorKey = this.currentKey.mode === 'minor';
+
         for (const [target, { weight }] of targets) {
+            if (minorKey && target !== 'I') continue;
             // Don't approach the degree we're already on
             if (target !== this.currentDegree) {
                 weights[target] = weight;
@@ -584,6 +614,10 @@ class MarkovJazzEngine {
         // Tritone sub
         else if (degree === 'bII') {
             options = ['7', '7#11', '9', '13'];
+        }
+        // In a minor key bVII is diatonic and its 7th is minor: G7 in A minor
+        else if (degree === 'bVII' && isMinorKey) {
+            options = ['7', '9', '13'];
         }
         // Borrowed chords from minor
         else if (['bIII', 'bVI', 'bVII'].includes(degree)) {

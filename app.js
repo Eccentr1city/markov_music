@@ -10,6 +10,7 @@ const LOOKAHEAD_S = 0.15;       // how far ahead audio is committed
 const WAIT_HOLD_MS = 120;       // a chord must be held this long in wait mode
 const EARLY_BEATS = 0.5;        // in-time mode accepts a chord pushed this early
 const SETTINGS_KEY = 'markov-jazz-settings';
+const SETTINGS_VERSION = 2;   // 2: Key Stability became an exponential key-length scale
 
 const BASS_STYLES = ['off', 'two', 'walk'];
 const BASS_LABELS = { off: 'Bass', two: 'Bass: two-feel', walk: 'Bass: walking' };
@@ -215,6 +216,22 @@ class MarkovJazzApp {
             this.saveSettings();
         });
 
+        // Key picker
+        this.keyButton = $('key-button');
+        this.keyPicker = $('key-picker');
+        this.keyLock = $('key-lock');
+        this.keyRootSelect = $('key-root');
+        this.keyModeSelect = $('key-mode');
+        this.keyStayToggle = $('key-stay');
+
+        this.keyButton.addEventListener('click', () => this.toggleKeyPicker());
+        this.keyModeSelect.addEventListener('change', () => this.fillKeyRoots());
+        $('key-cancel').addEventListener('click', () => this.toggleKeyPicker(false));
+        $('key-apply').addEventListener('click', () => this.applyKeyChoice());
+        document.addEventListener('pointerdown', (e) => {
+            if (!this.keyPicker.hidden && !e.target.closest('.key-picker-anchor')) this.toggleKeyPicker(false);
+        });
+
         // Display
         this.keyDisplay = $('current-key');
         this.scoreDisplay = $('score');
@@ -229,7 +246,9 @@ class MarkovJazzApp {
         document.addEventListener('keydown', (e) => {
             if (e.target.matches('select, input[type="text"]')) return;
 
-            if (e.code === 'Space') {
+            if (e.code === 'Escape') {
+                this.toggleKeyPicker(false);
+            } else if (e.code === 'Space') {
                 e.preventDefault();
                 this.togglePlay();
             } else if (e.code === 'KeyR') {
@@ -280,6 +299,7 @@ class MarkovJazzApp {
 
     saveSettings(bassStyle = this.bass.style) {
         const settings = {
+            version: SETTINGS_VERSION,
             tempo: this.tempo,
             engine: this.engine.settings,
             click: this.drums.clickEnabled,
@@ -313,6 +333,9 @@ class MarkovJazzApp {
         }
 
         if (saved.engine) {
+            // A stability saved under the old scale would mean something quite
+            // different now (85 was ~11 bars per key; it's now ~24). Drop it.
+            if (saved.version !== SETTINGS_VERSION) delete saved.engine.keyStability;
             this.engine.updateSettings(saved.engine);
             for (const [setting, slider] of Object.entries(this.engineSliders)) {
                 if (saved.engine[setting] != null) slider.value = Math.round(saved.engine[setting] * 100);
@@ -491,9 +514,17 @@ class MarkovJazzApp {
         });
     }
 
-    reset() {
+    /**
+     * Start a new progression. With no arguments a locked key is kept, so R
+     * gives you another chorus in the key you're practising.
+     */
+    reset(key = null, lockKey = false) {
         this.pause();
-        this.engine.reset();
+        if (!key && this.engine.keyLocked) {
+            key = { ...this.bars[0]?.key ?? this.engine.currentKey };
+            lockKey = true;
+        }
+        this.engine.reset(key, lockKey);
         this.bass.reset();
         this.keys.reset();
         this.keyboard.clearLatched();
@@ -609,6 +640,7 @@ class MarkovJazzApp {
 
         const bar = this.getCurrentBar();
         this.setMusicText(this.keyDisplay, `${Theory.pretty(bar.key.root)} ${bar.key.mode}`);
+        this.keyLock.hidden = !this.engine.keyLocked;
     }
 
     createBarElement(bar, index) {
@@ -685,6 +717,54 @@ class MarkovJazzApp {
                 el.appendChild(document.createTextNode(part));
             }
         }
+    }
+
+    // ── Key picker ──────────────────────────────────────────────────────────
+
+    toggleKeyPicker(open = this.keyPicker.hidden) {
+        if (open) {
+            // Start from the key on screen
+            const key = this.getCurrentBar().key;
+            this.keyModeSelect.value = key.mode;
+            this.fillKeyRoots(Theory.pitchClass(key.root));
+            this.keyStayToggle.checked = true;
+        }
+        this.keyPicker.hidden = !open;
+        this.keyButton.setAttribute('aria-expanded', String(open));
+    }
+
+    /** Key names depend on the mode (D♭ major, but C♯ minor). */
+    fillKeyRoots(selectedPc = null) {
+        const current = selectedPc ?? (this.keyRootSelect.value === 'random' ? null : parseInt(this.keyRootSelect.value));
+        this.keyRootSelect.innerHTML = '';
+
+        const random = document.createElement('option');
+        random.value = 'random';
+        random.textContent = 'Random';
+        this.keyRootSelect.appendChild(random);
+
+        for (let pc = 0; pc < 12; pc++) {
+            const option = document.createElement('option');
+            option.value = pc;
+            option.textContent = Theory.pretty(Theory.keyName(pc, this.keyModeSelect.value));
+            this.keyRootSelect.appendChild(option);
+        }
+        this.keyRootSelect.value = current ?? 'random';
+    }
+
+    applyKeyChoice() {
+        const choice = this.keyRootSelect.value;
+        this.toggleKeyPicker(false);
+
+        if (choice === 'random') {
+            this.engine.keyLocked = false;
+            this.reset();
+            return;
+        }
+
+        const mode = this.keyModeSelect.value;
+        const key = { root: Theory.keyName(parseInt(choice), mode), mode };
+        this.reset(key, this.keyStayToggle.checked);
     }
 
     // ── Analysis overlay ────────────────────────────────────────────────────
